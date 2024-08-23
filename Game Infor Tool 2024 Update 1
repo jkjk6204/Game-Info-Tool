@@ -1,0 +1,1683 @@
+import tkinter as tk
+from tkinter import messagebox
+import sqlite3
+import pyttsx3
+
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+
+# Database setup
+# noinspection PyGlobalUndefined
+def create_games_table():
+    global conn
+    try:
+        conn = sqlite3.connect('games.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS games (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            description TEXT,
+            tips TEXT,
+            glitches TEXT,
+            guide TEXT
+        )
+        ''')
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred while creating the table: {e}")
+    finally:
+        conn.close()
+
+
+# noinspection PyGlobalUndefined
+def add_game(name, description, tips, glitches, guide):
+    global conn
+    try:
+        conn = sqlite3.connect('games.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+        INSERT INTO games (name, description, tips, glitches, guide)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (name, description, tips, glitches, guide))
+        conn.commit()
+        print(f"Game '{name}' added successfully.")
+    except sqlite3.IntegrityError as e:
+        print(f"Error: Could not add game '{name}'. It may already exist. {e}")
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+
+# noinspection PyGlobalUndefined
+def fetch_game_data(game_name):
+    global conn
+    try:
+        conn = sqlite3.connect('games.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM games WHERE name = ?', (game_name,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "name": row[1],
+                "description": row[2],
+                "tips": row[3],
+                "glitches": row[4],
+                "guide": row[5]
+            }
+        else:
+            return None
+    except sqlite3.Error as e:
+        print(f"An error occurred while fetching the data: {e}")
+        return None
+    finally:
+        conn.close()
+
+# GUI setup
+def search_game():
+    game_name = entry.get()
+    if not game_name:
+        messagebox.showwarning("Input Error", "Please enter a game name.")
+        return
+
+    game_data = fetch_game_data(game_name)
+
+    if game_data:
+        display_game_info(game_data)
+    else:
+        result_label.config(text="Game not found. Please try again later.")
+        speak_text("Game not found. Please try again later.")
+
+def display_game_info(game_data):
+    if not game_data:
+        result_label.config(text="Game not found.")
+        speak_text("Game not found.")
+        return
+
+    info_text = f"Name: {game_data['name']}\n"
+    info_text += f"Description: {game_data['description']}\n"
+    info_text += f"Tips and Tricks:\n{game_data['tips']}\n"
+    info_text += f"Glitch Spots:\n{game_data['glitches']}\n"
+    info_text += f"Guide:\n{game_data['guide']}\n"
+
+    result_label.config(text=info_text)
+    speak_text(info_text)
+
+def speak_text(text):
+    engine.say(text)
+    engine.runAndWait()
+
+# Main execution
+if __name__ == '__main__':
+    create_games_table()
+
+    # Example game data - Uncomment to add game to database
+    add_game(
+        "Minecraft",
+        "A sandbox video game developed by Mojang Studios. In Minecraft, players explore a blocky, procedurally generated 3D world with infinite terrain, discovering and extracting raw materials, crafting tools and items, and building structures or earthworks.",
+        "1. Always carry a pickaxe and a sword. 2. Build a shelter before nightfall. 3. Use a bed to skip the night.",
+        "1. Duplication glitch in creative mode. 2. Blocks floating in the air. 3. Occasionally, entities might get stuck.",
+        "1. Start by gathering basic resources like wood and stone. 2. Craft essential tools and build a shelter. 3. Explore caves for valuable resources like coal and iron. 4. Build and enchant weapons and armor to protect yourself from hostile mobs."
+    )
+
+    add_game(
+        "Fortnite",
+        "A battle royal game developed by Epic Games. In Fortnite, 100 players are dropped onto an island and compete to be the last person or team standing. Players can gather resources, build structures, and fight other players.",
+        "1. Always gather resources to build cover. 2. Aim for high ground to spot enemies. 3. Use headphones to hear footsteps.",
+        "1. Building glitches causing structures to appear in the wrong place. 2. Weapon and item synchronization. 3. Occasionally, players may fall through the map.",
+        "1. Drop in a less crowded area to loot safely. 2. Collect materials and build defenses as you encounter enemies. 3. Keep an eye on the shrinking play zone and move towards the safe area."
+    )
+
+    add_game(
+        "Among Us",
+        "A multiplayer social deduction game developed by InnerSloth. In Among Us, players work together to complete tasks on a spaceship while impostors try to eliminate the crew without being detected.",
+        "1. Complete tasks quickly and efficiently. 2. Pay attention to other players' behavior. 3. Use the emergency meetings wisely.",
+        "1. Players can get stuck in the map due to glitches. 2. Occasionally, the taskbar may not update correctly. 3. Impostors can use glitches to hide their actions.",
+        "1. Stick with a group to avoid being alone. 2. Report suspicious behavior and attend meetings. 3. Use visual tasks to prove your innocence."
+    )
+    add_game(
+        "Skyrim",
+        "The Elder Scrolls V: Skyrim is an open-world action role-playing game developed by Bethesda Game Studios. Players assume the role of the Dragon born, a hero with the ability to speak the dragon language and fight against dragons in a fantasy world.",
+        "1. Invest in smiting and enchanting to improve your gear. 2. Use shouts strategically in combat. 3. Explore dungeons and complete quests to gain experience and loot.",
+        "1. Sometimes, quests may not trigger properly due to bugs. 2. NPCs might get stuck or behave strangely. 3. Certain mods may cause conflicts.",
+        "1. Follow the main quest line to learn about the Dragon born prophecy. 2. Join guilds and factions to unlock special abilities and quests. 3. Explore the world to find hidden treasures and side quests."
+    )
+
+    add_game(
+        "Grand Theft Auto III",
+        "Grand Theft Auto III is an open-world action-adventure game developed by DMA Design (later known as Rockstar North). Set in Liberty City, players control the silent protagonist Claude as he rises through the criminal underworld.",
+        "1. Explore the city to find hidden items. 2. Upgrade weapons and vehicles to improve performance. 3. Pay attention to in-game radio stations for tips and clues.",
+        "1. Occasional vehicle physics glitches. 2. Some missions may have bugs causing progress issues. 3. Characters or objects may get stuck in certain areas.",
+        "1. Complete missions to progress through the story. 2. Use the map to locate key locations and missions. 3. Engage in side activities for additional rewards."
+    )
+
+    add_game(
+        "Grand Theft Auto Vice City",
+        "Grand Theft Auto: Vice City is an open-world action-adventure game developed by Rockstar North. Set in the 1980s in Vice City, players control Tommy Perceptive as he builds his criminal empire and takes over the city.",
+        "1. Invest in properties for additional income. 2. Use the map to navigate and find mission locations. 3. Complete side missions to unlock special vehicles and weapons.",
+        "1. Some missions may have timing issues or bugs. 2. Vehicles may occasionally behave erratically. 3. NPCs can sometimes get stuck or act unpredictably.",
+        "1. Follow the main storyline to gain control of the city. 2. Purchase properties to expand your criminal empire. 3. Explore the city to discover hidden secrets and collectibles."
+    )
+
+    add_game(
+        "Grand Theft Auto San Andreas",
+        "Grand Theft Auto: San Andreas is an open-world action-adventure game developed by Rockstar North. Set in the fictional state of San Andreas, players control CJ as he returns to his hometown and seeks to restore his family's former glory.",
+        "1. Customize vehicles and characters for better performance. 2. Use the map and GPS for navigation. 3. Engage in side activities like gym workouts and gang wars for extra benefits.",
+        "1. Some missions may have bugs causing issues with objectives. 2. Vehicles can sometimes glitch, especially during high-speed chases. 3. NPCs might exhibit erratic behavior or get stuck.",
+        "1. Complete the main missions to advance the story. 2. Take part in side missions and activities to improve your skills and unlock new features. 3. Explore different regions to fully experience the game's content."
+    )
+
+    add_game(
+        "Grand Theft Auto IV",
+        "Grand Theft Auto IV is an open-world action-adventure game developed by Rockstar North. Set in Liberty City, players control Niko Belli, an Eastern European immigrant, as he navigates the criminal underworld and seeks a better life in the city.",
+        "1. Utilize cover and tactical shooting in combat. 2. Manage your character's health and relationships for better results. 3. Explore the city for additional side missions and activities.",
+        "1. Some missions might have issues with triggering events. 2. Vehicles may occasionally have handling issues. 3. NPCs may exhibit occasional pathfinding problems.",
+        "1. Follow the main story missions to progress through the game. 2. Engage in side activities and mini-games for additional rewards. 3. Explore the city to find hidden items and collectibles."
+    )
+
+    add_game(
+        "Grand Theft Auto V",
+        "Grand Theft Auto V is an open-world action-adventure game developed by Rockstar North. Set in the fictional state of San Andreas, players control three protagonists—Michael, Franklin, and Trevor—as they plan and execute heists while navigating their personal lives and criminal endeavors.",
+        "1. Switch between characters strategically for different missions. 2. Use the in-game map and GPS to navigate effectively. 3. Participate in side activities to gain additional income and rewards.",
+        "1. Occasionally, mission objectives may not trigger correctly. 2. Vehicles and NPCs can sometimes exhibit erratic behavior. 3. Online mode may experience connectivity issues or bugs.",
+        "1. Complete the main story missions to progress the narrative. 2. Engage in side missions and heists to earn money and upgrade your characters. 3. Explore the vast open world for hidden treasures and activities."
+    )
+
+    add_game(
+        "Grand Theft Auto VI",
+        "Grand Theft Auto VI is an upcoming open-world action-adventure game developed by Rockstar Games. Set in a new fictional city, the game is expected to offer an expansive open world with new gameplay mechanics and storylines.",
+        "1. Explore the new city to familiarize yourself with key locations. 2. Experiment with new gameplay mechanics and features. 3. Engage in side missions and activities to maximize your experience.",
+        "1. As the game is upcoming, potential bugs and issues may not be fully documented yet. 2. New mechanics may cause unexpected glitches. 3. Keep an eye out for updates and patches.",
+        "1. Follow the main storyline to experience the new narrative. 2. Participate in side activities and missions for additional content. 3. Explore the city to discover new features and hidden elements."
+    )
+    add_game(
+        "Red Dead Revolver",
+        "Red Dead Revolver is a third-person action-adventure game developed by Rockstar San Diego. Set in the American Wild West, players control a bounty hunter seeking revenge and justice.",
+        "1. Use cover effectively in shootouts. 2. Complete side missions to improve your skills. 3. Upgrade weapons and abilities as you progress.",
+        "1. Some missions may have issues with triggering events. 2. Character animations may occasionally glitch. 3. NPCs might get stuck in certain scenarios.",
+        "1. Follow the main storyline to progress through the game. 2. Engage in side activities to gain additional rewards. 3. Explore the open world to uncover hidden secrets and items."
+    )
+
+    add_game(
+        "Red Dead Redemption",
+        "Red Dead Redemption is an open-world action-adventure game developed by Rockstar San Diego. Set in the early 20th century, players control John Marston, a former outlaw searching for his old gang members.",
+        "1. Use the Dead Eye system to slow down time in gunfights. 2. Complete side missions and challenges for extra rewards. 3. Hunt and fish to gather resources.",
+        "1. Occasionally, mission objectives may not trigger correctly. 2. Vehicles and animals can sometimes behave unpredictably. 3. NPCs might exhibit erratic behavior or get stuck.",
+        "1. Follow the main storyline to uncover the fate of John Marston. 2. Participate in side missions and challenges to enhance your experience. 3. Explore the vast open world to discover hidden treasures and secrets."
+    )
+
+    add_game(
+        "Red Dead Redemption 2",
+        "Red Dead Redemption 2 is an open-world action-adventure game developed by Rockstar Games. Set in the late 1800s, players control Arthur Morgan, an outlaw and member of the Van der Linde gang, as they navigate the decline of the Wild West.",
+        "1. Manage your horse's health and stamina for better performance. 2. Engage in various side activities like fishing, hunting, and crafting. 3. Use the game's morality system to make choices that affect the story.",
+        "1. Some missions may have bugs or issues with triggering events. 2. NPCs might exhibit occasional glitches or erratic behavior. 3. The game may experience performance issues on certain hardware configurations.",
+        "1. Follow the main storyline to experience Arthur Morgan's journey. 2. Engage in side activities and missions to gain additional rewards and improve your skills. 3. Explore the detailed open world to uncover hidden secrets and items."
+    )
+    add_game(
+        "Gears of War",
+        "Gears of War is a third-person shooter developed by Epic Games. Set in a post-apocalyptic world, players fight against the Locust Horde to save humanity.",
+        "1. Use cover effectively to avoid enemy fire. 2. Make use of the game's various weapons and gadgets. 3. Coordinate with teammates in multiplayer modes.",
+        "1. Occasionally, enemies may glitch and not respond correctly. 2. Sometimes, weapon pickups may not appear as expected. 3. Certain levels may have issues with triggering events.",
+        "1. Follow the main storyline to progress through the game. 2. Explore different maps and areas to uncover secrets. 3. Utilize various weapons and strategies to defeat enemies."
+    )
+
+    add_game(
+        "Gears of War 2",
+        "Gears of War 2 continues the battle against the Locust Horde, introducing new gameplay mechanics and a deeper story. Players must fight their way through increasingly challenging enemies and environments.",
+        "1. Use the new cover mechanics to your advantage. 2. Experiment with different weapon combinations. 3. Complete side missions to gain extra rewards.",
+        "1. Some levels may have issues with enemy AI. 2. Occasionally, players might experience connectivity issues in multiplayer modes. 3. Certain visual glitches may occur during gameplay.",
+        "1. Progress through the main storyline to uncover more about the Locust threat. 2. Engage in side missions and challenges for additional rewards. 3. Explore the game world to find hidden items and secrets."
+    )
+
+    add_game(
+        "Gears of War 3",
+        "Gears of War 3 wraps up the original trilogy, featuring epic battles and a conclusion to the story of Marcus Fenix and his squad. Players face the final conflict against the Locust Horde and new enemy factions.",
+        "1. Utilize the new weaponry and abilities available in this installment. 2. Coordinate with teammates in the new multiplayer modes. 3. Manage your resources and health carefully during combat.",
+        "1. Some missions may have issues with event triggers. 2. Occasionally, players might experience bugs with enemy behaviors. 3. Certain graphical glitches may be present in specific areas.",
+        "1. Follow the main storyline to reach the game's conclusion. 2. Participate in multiplayer modes to test your skills. 3. Explore the detailed game world to uncover additional content and secrets."
+    )
+
+    add_game(
+        "Gears of War 4",
+        "Gears of War 4 introduces a new generation of soldiers fighting against a new threat known as the Swarm. Set 25 years after the events of the previous games, players control JD Fenix and his team in their battle for survival.",
+        "1. Master the new gameplay mechanics introduced in this installment. 2. Experiment with new weapons and enemy types. 3. Utilize the game's cover system to stay protected in combat.",
+        "1. Some enemies may exhibit unusual behaviors or glitches. 2. Certain missions might have issues with objective triggers. 3. Occasionally, players may experience network issues in multiplayer modes.",
+        "1. Progress through the main storyline to uncover the new threat. 2. Engage in multiplayer modes to test your skills against other players. 3. Explore the game world to find hidden items and lore."
+    )
+
+    add_game(
+        "Gears 5",
+        "Gears 5 continues the saga with Kait Diaz as the protagonist. Players delve into her backstory and face new threats while battling both the Swarm and other enemies in a richly detailed world.",
+        "1. Utilize the new gameplay mechanics and weapons introduced in Gears 5. 2. Explore the game's environments for valuable resources and secrets. 3. Coordinate with teammates in both the campaign and multiplayer modes.",
+        "1. Some gameplay elements may have minor bugs or glitches. 2. Occasionally, players might experience issues with the game's physics or AI. 3. Network issues may affect multiplayer performance.",
+        "1. Follow Kait Diaz's journey through the main storyline. 2. Participate in multiplayer modes and challenges for additional content. 3. Explore the expansive game world to uncover hidden secrets and story elements."
+    )
+
+    add_game(
+        "Gears of War: Judgment",
+        "Gears of War: Judgment is a spin-off set before the events of the original Gears of War, focusing on Kilo Squad's fight against the Locust. It introduces new gameplay elements and a different perspective on the Gears universe.",
+        "1. Use the new gameplay mechanics to your advantage. 2. Explore the game's levels thoroughly to find hidden items. 3. Utilize the game's new features for improved combat strategies.",
+        "1. Some gameplay mechanics might have minor glitches. 2. Occasionally, players may encounter issues with enemy AI. 3. Certain levels may have visual or performance issues.",
+        "1. Follow the storyline to learn more about Kilo Squad's mission. 2. Engage in the game's various modes and challenges. 3. Explore each level to uncover secrets and additional content."
+    )
+    add_game(
+        "Super Mario Bros.",
+        "Super Mario Bros. is a platformer game developed by Nintendo. Players control Mario as he travels through the Mushroom Kingdom to rescue Princess Peach from Browser.",
+        "1. Use power-ups like the Fire Flower and Super Mushroom. 2. Find and use warp zones to skip levels. 3. Practice timing for jumping and running.",
+        "1. Sometimes, hidden blocks may not be apparent. 2. Enemies may have unpredictable behaviors. 3. Occasionally, levels may have design quirks.",
+        "1. Collect coins and power-ups to aid your progress. 2. Learn the layout of each level to anticipate obstacles. 3. Explore each area to find secret exits and power-ups."
+    )
+
+    add_game(
+        "Super Mario 64",
+        "Super Mario 64 is a 3D platformer game developed by Nintendo. Players guide Mario through Princess Peach's castle and various worlds to collect Power Stars and defeat Browser.",
+        "1. Use Mario's jumping abilities to explore each level. 2. Collect Power Stars to unlock new areas. 3. Use the camera controls to better navigate the 3D environments.",
+        "1. Occasionally, camera controls may be difficult to manage. 2. Some stars may be challenging to collect due to game physics. 3. Rarely, level geometry might cause issues.",
+        "1. Explore each world thoroughly to find all Power Stars. 2. Use Mario's abilities to solve puzzles and defeat enemies. 3. Pay attention to visual clues to find hidden stars and secrets."
+    )
+
+    add_game(
+        "Super Mario Galaxy",
+        "Super Mario Galaxy is a 3D platformer game where Mario explores various galaxies to rescue Princess Peach and stop Browser. The game features innovative gravity mechanics and creative level design.",
+        "1. Use gravity shifts to navigate complex levels. 2. Collect Power Stars to unlock new galaxies. 3. Experiment with different power-ups and abilities.",
+        "1. Gravity mechanics can be disorienting. 2. Some levels may have complex navigation challenges. 3. Occasionally, physics glitches may occur.",
+        "1. Master the gravity mechanics to navigate through levels. 2. Collect all Power Stars to access new content. 3. Explore each galaxy to uncover hidden stars and secrets."
+    )
+
+    add_game(
+        "Super Mario Odyssey",
+        "Super Mario Odyssey is a 3D platformer where Mario travels across various kingdoms to rescue Princess Peach from Browser. The game features a new mechanic with Mario's hat, Cappy, which allows for capturing enemies and objects.",
+        "1. Use Cappy to capture enemies and objects for new abilities. 2. Explore each kingdom thoroughly to find Power Moons. 3. Use the map and hints to locate hidden items and secrets.",
+        "1. Capturing enemies may have occasional glitches. 2. Some moons can be challenging to find due to level design. 3. Occasionally, game physics may cause minor issues.",
+        "1. Utilize Cap's abilities to solve puzzles and defeat enemies. 2. Explore every corner of each kingdom to find all Power Moons. 3. Use the map and hints to locate hidden secrets and objectives."
+    )
+
+    add_game(
+        "Mario Kart 8 Deluxe",
+        "Mario Kart 8 Deluxe is a racing game where players compete in go-kart races featuring characters from the Mario franchise. The game includes various tracks, power-ups, and multiplayer modes.",
+        "1. Use power-ups strategically to gain an advantage. 2. Learn the tracks to master shortcuts and avoid obstacles. 3. Use drifting to improve your speed and handling.",
+        "1. Occasionally, players may experience issues with AI opponents. 2. Some tracks may have unexpected hazards. 3. Multiplayer modes may have network-related issues.",
+        "1. Practice on each track to improve your racing skills. 2. Use power-ups wisely to gain an advantage in races. 3. Explore different characters and vehicles to find your preferred setup."
+    )
+
+    add_game(
+        "Super Mario Party",
+        "Super Mario Party is a party game featuring a variety of mini-games and board game-style gameplay. Players compete to collect stars and coins while participating in various mini-games.",
+        "1. Master the mini-games to gain an advantage. 2. Use items and coins strategically to collect stars. 3. Pay attention to the board game elements and plan your moves accordingly.",
+        "1. Mini-games may have varying levels of difficulty. 2. Board game mechanics may have occasional issues. 3. Multiplayer may experience connectivity problems.",
+        "1. Learn the rules and strategies for each mini-game. 2. Plan your moves carefully in the board game sections. 3. Use items and coins effectively to achieve victory."
+    )
+
+    add_game(
+        "Super Mario Maker",
+        "Super Mario Maker allows players to create and share their own Mario levels using a variety of tools and assets from different Mario games. Players can also play levels created by others.",
+        "1. Experiment with different level design tools and assets. 2. Play a variety of user-created levels to find new challenges. 3. Use the online features to share and rate levels.",
+        "1. User-created levels may have design quirks or glitches. 2. Occasionally, online features may experience connectivity issues. 3. Some levels may be extremely challenging or unbalanced.",
+        "1. Utilize the level design tools to create engaging and fun levels. 2. Play and provide feedback on levels created by others. 3. Explore different themes and mechanics to enhance your level design skills."
+    )
+
+    add_game(
+        "Mario Tennis Aces",
+        "Mario Tennis Aces is a sports game featuring tennis matches with characters from the Mario franchise. The game includes a variety of modes and special moves for each character.",
+        "1. Master the special moves and abilities of each character. 2. Practice timing and positioning for effective serves and returns. 3. Explore different game modes to improve your skills.",
+        "1. Occasionally, players may experience issues with game physics. 2. Some characters may have balance issues. 3. Multiplayer may experience connectivity problems.",
+        "1. Learn the strengths and weaknesses of each character. 2. Practice different shots and serves to improve your game. 3. Utilize the special moves to gain an advantage in matches."
+    )
+
+    add_game(
+        "Mario & Luigi Superstar Saga",
+        "Mario & Luigi: Superstar Saga is a role-playing game where players control Mario and Luigi as they embark on a quest to rescue Princess Peach's voice and save the Bean bean Kingdom.",
+        "1. Utilize the unique abilities of both Mario and Luigi in battles. 2. Explore the world to find hidden items and secrets. 3. Use the game's humor and dialogue to enhance your experience.",
+        "1. Some puzzles may be challenging or confusing. 2. Battles may have complex mechanics. 3. Occasionally, the game's humor may not be to everyone's taste.",
+        "1. Master the combat mechanics and abilities of both characters. 2. Explore every area to find hidden items and secrets. 3. Pay attention to the story and dialogue for additional hints and context."
+    )
+    add_game(
+        "Minecraft Dungeons",
+        "Minecraft Dungeons is an action-adventure dungeon crawler developed by Mojang Studios and Double Eleven. Set in the Minecraft universe, players battle through dungeons to defeat the Arch-Villager and his minions.",
+        "1. Use different weapon types to find your preferred play style. 2. Upgrade your gear and artifacts regularly. 3. Explore dungeons thoroughly for hidden loot and secrets.",
+        "1. Occasionally, the game may have connectivity issues. 2. Some dungeons might have repetitive layouts. 3. Certain enemies can be challenging due to their abilities.",
+        "1. Choose your character class and gear based on your preferred play style. 2. Team up with friends for a more enjoyable experience. 3. Complete side quests and challenges to earn better rewards."
+    )
+
+    add_game(
+        "Minecraft Earth",
+        "Minecraft Earth is an augmented reality mobile game that blends Minecraft’s creative gameplay with real-world exploration. Players can build structures, collect resources, and interact with others in a shared AR environment.",
+        "1. Explore your real-world surroundings to find resources and building materials. 2. Collaborate with other players to create larger projects. 3. Use the game’s AR features to enhance your building experience.",
+        "1. AR features may have occasional glitches or limitations. 2. The game may experience connectivity issues. 3. Some features might not work well in low-light environments.",
+        "1. Utilize AR features to create and view structures in your real-world environment. 2. Join community events and challenges to earn rewards. 3. Use in-game tools to improve your building and exploration experience."
+    )
+
+    add_game(
+        "Minecraft Story Mode",
+        "Minecraft Story Mode is an episodic graphic adventure based on the Minecraft universe. Players follow a narrative-driven story with branching choices that impact the outcome of the game.",
+        "1. Make choices that align with your preferred storyline. 2. Explore different dialogue options to uncover more about the story. 3. Complete puzzles and challenges to advance through episodes.",
+        "1. Occasionally, episodes may have bugs or performance issues. 2. Some choices may lead to unexpected outcomes. 3. The game's episodic nature means that later episodes may require purchasing.",
+        "1. Pay attention to the story and character interactions to make informed choices. 2. Explore each episode fully to uncover all secrets and achievements. 3. Use different dialogue and choice options to experience varied story outcomes."
+    )
+
+    add_game(
+        "Minecraft Story Mode  Season Two",
+        "Minecraft: Story Mode - Season Two continues the adventures of Jesse and their friends. Players make choices and complete quests in a new set of episodes, further expanding the story.",
+        "1. Continue making choices based on your preferred storyline. 2. Utilize new characters and settings introduced in the season. 3. Explore the new episodes to uncover additional story elements and secrets.",
+        "1. The game may have occasional bugs or performance issues. 2. Choices from Season One may influence the storyline. 3. Later episodes may require additional purchases.",
+        "1. Follow the story and character arcs to make impactful decisions. 2. Explore each episode to find hidden secrets and achievements. 3. Pay attention to the evolving story and character relationships."
+    )
+
+    add_game(
+        "Minecraft Legends",
+        "Minecraft Legends is an action-strategy game that blends the Minecraft universe with strategic gameplay. Players build and command armies to fend off invasions and battle through an expansive world.",
+        "1. Build and upgrade your base strategically to withstand enemy attacks. 2. Utilize different units and tactics to gain an advantage in battles. 3. Explore the world to gather resources and unlock new abilities.",
+        "1. The game may experience performance issues during large-scale battles. 2. Certain enemies or levels might be more challenging due to game balance. 3. Some mechanics might not be fully intuitive for new players.",
+        "1. Focus on building a strong base and defensive structures. 2. Experiment with different unit compositions and tactics. 3. Engage in side quests and exploration to improve your capabilities."
+
+    )
+    add_game(
+            "Halo: Combat Evolved",
+            "Halo: Combat Evolved is a first-person shooter developed by Bungee. The game follows the adventures of Master Chief, a super-soldier, fighting against the alien Covenant and the Flood.",
+            "1. Use the assault rifle for close to medium-range combat. 2. Utilize grenades and vehicles effectively. 3. Learn enemy patterns and exploit their weaknesses.",
+            "1. Some enemies may have unpredictable behaviors. 2. Occasionally, the game may have minor graphical glitches. 3. Certain levels may have challenging encounters.",
+            "1. Follow the main storyline to progress through the game. 2. Explore each level for hidden items and secrets. 3. Master the use of various weapons and vehicles."
+    )
+
+    add_game(
+            "Halo 2",
+            "Halo 2 is the sequel to Halo: Combat Evolved, continuing the story of Master Chief. The game introduces new weapons, vehicles, and an expanded storyline involving the Covenant and the Flood.",
+            "1. Experiment with the new weapon types and their effects. 2. Use the active camouflage power-up strategically. 3. Switch between different weapons based on the situation.",
+            "1. Some missions may have balance issues. 2. Occasionally, there may be graphical glitches or bugs. 3. Certain enemy types can be difficult to counter.",
+            "1. Follow the story to understand the expanded lore. 2. Take advantage of the new gameplay mechanics and weapons. 3. Explore each mission to find hidden objectives and items."
+        )
+
+    add_game(
+            "Halo 3",
+            "Halo 3 concludes the trilogy, following Master Chief’s final battle against the Covenant and the Flood. The game features enhanced graphics, new gameplay elements, and a focus on the epic conclusion of the storyline.",
+            "1. Use new vehicles and weapons effectively. 2. Utilize the Forge mode to create custom maps. 3. Master the new equipment types available in the game.",
+            "1. Some levels may have minor bugs or glitches. 2. The difficulty of certain missions may vary. 3. Multiplayer may experience balance issues.",
+            "1. Follow the epic conclusion of the storyline for a satisfying experience. 2. Use the Forge mode to experiment with custom content. 3. Engage in multiplayer to experience new gameplay features."
+        )
+
+    add_game(
+            "Halo 4",
+            "Halo 4 marks the beginning of a new trilogy, introducing new enemies and a deeper story about the Forerunners. The game continues Master Chief's journey with updated graphics and gameplay mechanics.",
+            "1. Learn to use the new weapons and abilities introduced. 2. Adapt to the new enemy types and tactics. 3. Explore the environments for additional lore and secrets.",
+            "1. Some levels may have performance issues. 2. The introduction of new mechanics may require adjustment. 3. Certain enemies may be challenging to defeat.",
+            "1. Follow the new storyline to uncover the mysteries of the Forerunners. 2. Utilize new gameplay features and mechanics effectively. 3. Explore each level thoroughly for hidden content and upgrades."
+        )
+
+    add_game(
+            "Halo 5 Guardians",
+            "Halo 5: Guardians continues the saga with new gameplay elements and a focus on the conflict between Master Chief and Spartan Locke. The game features enhanced multiplayer modes and an expanded storyline.",
+            "1. Master the new movement mechanics like sprinting and clambering. 2. Use the new weapon and vehicle options in multiplayer. 3. Work with your team to complete objectives effectively.",
+            "1. Multiplayer balance may vary with updates. 2. Some levels may have minor bugs or glitches. 3. The storyline may have complex elements to follow.",
+            "1. Explore the multiplayer modes to experience new features. 2. Follow the storyline to understand the conflict between characters. 3. Utilize the new gameplay mechanics to gain an advantage."
+        )
+
+    add_game(
+            "Halo Infinite",
+            "Halo Infinite continues the Master Chief’s story with an open-world approach and new gameplay mechanics. The game features a revamped graphics engine and introduces new enemies and allies.",
+            "1. Explore the open world to find collectibles and upgrades. 2. Use new equipment and abilities to navigate the environment. 3. Adapt to new enemy types and tactics introduced in the game.",
+            "1. The open world may have performance issues on certain systems. 2. Some gameplay mechanics may require adjustment. 3. The story may have complex elements and multiple objectives.",
+            "1. Take advantage of the open-world design to explore and uncover secrets. 2. Use the new gameplay mechanics to navigate and combat effectively. 3. Follow the storyline to understand the new threats and allies."
+        )
+    add_game(
+        "Dishonored",
+        "Dishonored is a first-person action-adventure game that emphasizes stealth, combat, and the use of supernatural powers. Players take on the role of Corvo Attano, a bodyguard-turned-assassin seeking revenge.",
+        "1. Utilize stealth and supernatural abilities to avoid detection. 2. Explore the city of Dunwall to uncover secrets and gain power. 3. Choose between lethal and non-lethal methods to complete missions.",
+        "1. The game's moral choices can lead to different outcomes. 2. The stealth mechanics may be challenging for some players. 3. The dark atmosphere and complex story may not appeal to everyone.",
+        "1. Experiment with different powers and gadgets to find your playstyle. 2. Pay attention to the game's environment for hidden paths and clues. 3. Consider the consequences of your actions on the game's world and story."
+    )
+
+    add_game(
+        "Dishonored 2",
+        "Dishonored 2 is the sequel to Dishonored, offering a new story with two playable characters, Corvo Attano and Emily Kaldwin. The game introduces new powers, weapons, and a more expansive world to explore.",
+        "1. Choose between Corvo and Emily, each with unique abilities. 2. Utilize stealth, combat, and supernatural powers to overcome challenges. 3. Explore the intricately designed levels with multiple paths and secrets.",
+        "1. The game’s difficulty can be challenging, especially on higher settings. 2. Some players may find the dual protagonists' storylines complex. 3. Performance issues may occur on certain hardware configurations.",
+        "1. Replay missions with different characters to experience new gameplay options. 2. Use the environment and your abilities creatively to avoid or eliminate enemies. 3. Pay attention to the story and lore for a deeper understanding of the game’s world."
+    )
+
+    add_game(
+        "Dishonored Death of the Outsider",
+        "Dishonored: Death of the Outsider is a standalone expansion to Dishonored 2, featuring Billie Lurk as the protagonist. The game offers new abilities, a streamlined approach to gameplay, and a focused story.",
+        "1. Use new powers and gadgets to complete missions. 2. Explore the game’s world to find hidden items and lore. 3. Plan your approach carefully to avoid detection and complete objectives.",
+        "1. The shorter length of the game may disappoint fans of the series. 2. The lack of a chaos system changes the impact of player choices. 3. Some players may find the difficulty curve steep in certain sections.",
+        "1. Experiment with Billie’s unique abilities to find creative solutions. 2. Take time to explore the game’s environments for hidden content. 3. Approach each mission with a different strategy to see various outcomes."
+    )
+    add_game(
+        "Dishonored Definitive Edition",
+        "Dishonored: Definitive Edition is a remastered version of the original Dishonored game, featuring enhanced graphics and all previously released downloadable content (DLC), including additional missions and challenges.",
+        "1. Play through the original game with improved graphics and performance. 2. Explore the world of Dunwall with all DLC content integrated into the experience. 3. Use stealth, combat, and supernatural powers to complete your objectives.",
+        "1. The core gameplay remains the same, so it may feel familiar to those who played the original. 2. Some of the DLC content may alter the pacing and balance of the main story. 3. The game's atmosphere and mature themes may not appeal to everyone.",
+        "1. Take advantage of the enhanced visuals to fully immerse yourself in the world of Dunwall. 2. Explore the additional content provided by the DLCs for a richer experience. 3. Experiment with different playstyles, utilizing the full range of powers and gadgets."
+    )
+    add_game(
+        "Borderlands",
+        "Borderlands is a first-person shooter with RPG elements, set on the desolate planet of Pandora. The game is known for its unique cel-shaded art style, cooperative multiplayer, and a massive array of procedurally generated weapons.",
+        "1. Explore the open world of Pandora and complete various missions. 2. Choose from four different character classes, each with unique abilities. 3. Collect and customize an enormous variety of weapons and equipment.",
+        "1. The repetitive mission structure may not appeal to everyone. 2. The game’s humor and tone may not be suitable for all audiences. 3. Some players may find the RPG elements and leveling system complex.",
+        "1. Take advantage of cooperative multiplayer to experience the game with friends. 2. Experiment with different character builds to find your preferred playstyle. 3. Explore the world thoroughly to discover hidden loot and secrets."
+    )
+
+    add_game(
+        "Borderlands 2",
+        "Borderlands 2 is the sequel to the original game, offering an expanded world, more character classes, and an even greater variety of weapons. The game continues the story on Pandora, introducing new characters and a more engaging plot.",
+        "1. Choose from four new character classes, each with unique abilities and skill trees. 2. Engage in fast-paced combat with a vast arsenal of weapons and equipment. 3. Experience the game’s dark humor and story-driven missions.",
+        "1. The game’s difficulty can spike in certain areas, requiring careful preparation. 2. Some players may find the story’s humor and tone divisive. 3. The open-world exploration may feel overwhelming for some players.",
+        "1. Play with friends in cooperative mode to make challenging sections easier. 2. Experiment with different weapon types and character builds to optimize your playstyle. 3. Pay attention to the story and character interactions for a richer experience."
+    )
+
+    add_game(
+        "Borderlands: The Pre-Sequel",
+        "Borderlands: The Pre-Sequel is set between the events of the first two games, focusing on Handsome Jack’s rise to power. The game introduces low-gravity environments, new character classes, and a variety of new weapons and abilities.",
+        "1. Explore the moon of Pandora with low-gravity mechanics and oxygen management. 2. Choose from four new character classes, each with unique abilities and skill trees. 3. Experience the story of Handsome Jack’s rise from different perspectives.",
+        "1. The low-gravity mechanics may take some time to get used to. 2. Some players may find the story less compelling compared to other entries in the series. 3. The game’s setting may feel repetitive after extended play sessions.",
+        "1. Take advantage of the low-gravity environments to gain a tactical advantage in combat. 2. Experiment with the new character classes to find the one that suits your playstyle. 3. Explore the game’s environments thoroughly to uncover hidden loot and story elements."
+    )
+
+    add_game(
+        "Borderlands 3",
+        "Borderlands 3 continues the looter-shooter gameplay of the series, offering new worlds to explore, new character classes, and an even larger arsenal of weapons. The game features a new story, new enemies, and a variety of gameplay enhancements.",
+        "1. Explore multiple planets with unique environments and challenges. 2. Choose from four new Vault Hunters, each with unique abilities and skill trees. 3. Collect and customize an enormous variety of weapons and gear.",
+        "1. The game’s humor and story may not appeal to all players. 2. Some players may experience performance issues on certain systems. 3. The sheer amount of loot and customization options may feel overwhelming.",
+        "1. Play with friends in cooperative mode to maximize fun and efficiency. 2. Take time to explore each planet thoroughly to discover hidden secrets and side missions. 3. Experiment with different builds and gear combinations to optimize your character."
+    )
+
+    add_game(
+        "Borderlands Game of the Year Edition",
+        "Borderlands: Game of the Year Edition is a remastered version of the original Borderlands, featuring improved graphics, new quality-of-life enhancements, and all previously released DLCs.",
+        "1. Experience the original Borderlands with enhanced graphics and performance. 2. Explore Pandora with all DLC content integrated into the main game. 3. Choose from four character classes, each with unique abilities and playstyles.",
+        "1. The core gameplay remains the same, so it may feel familiar to those who played the original. 2. The game’s humor and tone may not be suitable for everyone. 3. Some players may find the RPG elements and leveling system complex.",
+        "1. Take advantage of the enhanced visuals to fully immerse yourself in the world of Pandora. 2. Explore the additional content provided by the DLCs for a richer experience. 3. Experiment with different playstyles, utilizing the full range of powers and gadgets."
+    )
+
+    add_game(
+        "Borderlands The Handsome Collection",
+        "Borderlands: The Handsome Collection is a compilation that includes Borderlands 2 and Borderlands: The Pre-Sequel, along with all DLCs. The collection is optimized for modern consoles, featuring enhanced graphics and improved performance.",
+        "1. Play through Borderlands 2 and The Pre-Sequel with all DLC content included. 2. Experience the games with enhanced graphics and performance on modern systems. 3. Enjoy cooperative multiplayer with friends, either online or split-screen.",
+        "1. The games’ humor and tone may not appeal to everyone. 2. Some players may experience performance issues on certain systems. 3. The large amount of content may feel overwhelming to new players.",
+        "1. Take advantage of the collection’s cooperative multiplayer to play with friends. 2. Explore the full range of DLC content to get the most out of the games. 3. Experiment with different character builds and weapons to find your preferred playstyle."
+    )
+    add_game(
+        "Devil May Cry: Peak of Combat (iOS, Android)",
+        "Devil May Cry: Peak of Combat is a mobile adaptation of the popular Devil May Cry series, featuring action-packed combat and stylish gameplay.",
+        "1. Master the combat system for stylish kills. 2. Upgrade your abilities to enhance your skills. 3. Complete missions to unlock new characters.",
+        "1. Mobile controls may be less precise than console controls. 2. In-app purchases may be required for certain features. 3. Performance may vary across different devices.",
+        "1. Explore different skill combinations for optimal performance. 2. Keep an eye on your stamina and health during battles. 3. Participate in events to earn exclusive rewards."
+    )
+
+    add_game(
+        "Momodora: Moonlit Farewell (PC)",
+        "Momodora: Moonlit Farewell is a 2D action-platformer with a focus on challenging gameplay and beautiful pixel art.",
+        "1. Learn enemy patterns to avoid damage. 2. Explore every area for hidden secrets and upgrades. 3. Use your abilities strategically to overcome obstacles.",
+        "1. The game can be challenging, requiring patience. 2. Some areas may be difficult to navigate. 3. Performance issues might occur on lower-end PCs.",
+        "1. Experiment with different abilities to find your preferred playstyle. 2. Save frequently to avoid losing progress. 3. Utilize shortcuts and hidden paths to ease your journey."
+    )
+
+    add_game(
+        "Unstoppable (PC)",
+        "Unstoppable is a fast-paced action game where you battle through waves of enemies with a variety of weapons and abilities.",
+        "1. Choose your weapons based on the enemy types. 2. Keep moving to avoid getting overwhelmed. 3. Upgrade your abilities for more power.",
+        "1. The difficulty can spike unexpectedly. 2. Some weapons may be overpowered or underpowered. 3. Performance issues on older PCs.",
+        "1. Use cover effectively during battles. 2. Plan your upgrades according to your playstyle. 3. Try different strategies for different enemy types."
+    )
+
+    add_game(
+        "Radiance (PC)",
+        "Radiance is an atmospheric adventure game featuring a unique art style and engaging narrative.",
+        "1. Pay attention to environmental details for clues. 2. Solve puzzles to progress through the story. 3. Explore all areas to uncover the full narrative.",
+        "1. The pacing can be slow, which may affect gameplay. 2. Some puzzles might be difficult to solve. 3. Performance may vary based on system specifications.",
+        "1. Take your time to enjoy the story and environment. 2. Make note of clues and hints provided in the game. 3. Use available resources for help with challenging puzzles."
+    )
+
+    add_game(
+        "Ravendawn (PC)",
+        "Ravendawn is an open-world RPG set in a mystical world with rich lore and exploration.",
+        "1. Explore the world to discover hidden quests and treasures. 2. Develop your character's skills and abilities. 3. Engage in combat with various enemies and bosses.",
+        "1. The open-world nature may lead to some performance issues. 2. Quest progression might be non-linear and confusing. 3. Some bugs may affect gameplay.",
+        "1. Pay attention to character development to maximize your effectiveness. 2. Interact with NPCs for additional quests and lore. 3. Save your game frequently to avoid losing progress."
+    )
+
+    add_game(
+        "The Temple Of (PC)",
+        "The Temple Of is a puzzle-platformer game featuring challenging levels and intricate designs.",
+        "1. Analyze each level thoroughly before making moves. 2. Use your tools and abilities to solve puzzles. 3. Learn from each failure to improve your approach.",
+        "1. Some puzzles can be extremely difficult. 2. Level design may cause frustration. 3. Performance issues may arise on lower-end systems.",
+        "1. Take breaks if you get stuck on a puzzle. 2. Use hints if available to progress. 3. Experiment with different strategies to solve puzzles."
+    )
+
+    add_game(
+        "Atlas Wept (PC)",
+        "Atlas Wept is an indie adventure game with a focus on narrative and exploration in a fantastical world.",
+        "1. Engage deeply with the story and characters. 2. Explore every corner to find hidden lore. 3. Solve narrative-driven puzzles to advance.",
+        "1. The narrative focus may limit gameplay variety. 2. Some story elements may be hard to follow. 3. Performance may vary depending on system specs.",
+        "1. Pay close attention to dialogue and story elements. 2. Explore thoroughly to uncover all content. 3. Save your game often to preserve progress."
+    )
+
+    add_game(
+        "Immortal Life (PC)",
+        "Immortal Life is a simulation RPG where you manage a character's life in a fantasy world, including farming, crafting, and social interactions.",
+        "1. Manage your time efficiently between tasks. 2. Build relationships with other characters for benefits. 3. Explore different skills and crafts to enhance your gameplay.",
+        "1. Balancing tasks can be challenging. 2. Some activities may become repetitive. 3. Performance issues may occur on less powerful PCs.",
+        "1. Focus on improving your character's skills over time. 2. Engage with the community to gain useful insights. 3. Use in-game resources to streamline tasks."
+    )
+
+    add_game(
+        "Prince of Persia: The Lost Crown (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Prince of Persia: The Lost Crown is an action-adventure game featuring acrobatic combat and exploration in a mythical setting.",
+        "1. Master the acrobatic moves for fluid gameplay. 2. Explore levels to find hidden secrets and upgrades. 3. Utilize different combat strategies for varied enemies.",
+        "1. Some platforming sections may be tricky. 2. The combat system can be challenging to master. 3. Performance issues on older consoles.",
+        "1. Practice acrobatic moves to improve fluidity. 2. Take time to explore each level thoroughly. 3. Adapt your combat strategies to different enemy types."
+    )
+
+    add_game(
+        "Arclands (PC)",
+        "Arclands is a strategy game with a focus on tactical combat and resource management in a fantastical setting.",
+        "1. Plan your tactics carefully before each battle. 2. Manage your resources efficiently to sustain your army. 3. Explore different strategies to handle various challenges.",
+        "1. The game’s complexity might be overwhelming. 2. Resource management can be challenging. 3. Performance may vary based on system capabilities.",
+        "1. Experiment with different strategies to find what works best. 2. Keep track of your resources and plan accordingly. 3. Utilize in-game guides for complex scenarios."
+    )
+
+    add_game(
+        "Another Code: Recollection (Switch)",
+        "Another Code: Recollection is a puzzle-adventure game where players solve mysteries and uncover secrets through interactive storytelling.",
+        "1. Pay attention to details in the environment for clues. 2. Solve puzzles to advance the story. 3. Interact with characters to gather information.",
+        "1. Puzzles may be challenging and require patience. 2. Some clues may be difficult to interpret. 3. The game’s pacing can be slow.",
+        "1. Take notes on clues and puzzle solutions. 2. Save frequently to avoid losing progress. 3. Engage with all characters for a richer experience."
+    )
+
+    add_game(
+        "The Last of Us Part 2: Remastered (PS5)",
+        "The Last of Us Part 2: Remastered brings enhanced graphics and performance to the critically acclaimed action-adventure game.",
+        "1. Use stealth to avoid confrontations when necessary. 2. Upgrade your equipment to enhance your survival. 3. Explore environments thoroughly for resources.",
+        "1. The game’s emotional content may be intense. 2. Some performance issues might occur on different setups. 3. The story can be polarizing for some players.",
+        "1. Prepare for intense and emotional storytelling. 2. Experiment with different combat styles. 3. Take your time to explore and gather resources."
+    )
+
+    add_game(
+        "Graven (PC)",
+        "Graven is a dark fantasy action-adventure game featuring intense combat and atmospheric exploration.",
+        "1. Master the combat mechanics to overcome enemies. 2. Explore the dark world to find hidden areas and items. 3. Utilize different weapons and abilities effectively.",
+        "1. The dark atmosphere may affect visibility. 2. Combat can be challenging and require practice. 3. Performance issues may occur on less powerful PCs.",
+        "1. Adapt your tactics to different enemy types. 2. Use the environment to your advantage in combat. 3. Save often to avoid losing progress."
+    )
+
+    add_game(
+        "Howl (PS5, Xbox Series X|S)",
+        "Howl is a survival horror game set in a haunting environment with psychological elements and intense gameplay.",
+        "1. Manage your resources carefully to survive. 2. Use stealth to avoid enemies when possible. 3. Solve puzzles to progress through the game.",
+        "1. The horror elements may be intense for some players. 2. Resource management can be challenging. 3. Performance issues on older consoles.",
+        "1. Stay calm during intense moments to maintain control. 2. Explore thoroughly for hidden resources and clues. 3. Use in-game tips to help with difficult sections."
+    )
+
+    add_game(
+        "Soundscape (PC)",
+        "Soundscape is a unique rhythm-based adventure game where players navigate through a world driven by music and sound.",
+        "1. Synchronize your actions with the rhythm of the music. 2. Explore different soundscapes to uncover secrets. 3. Use musical cues to solve puzzles and advance.",
+        "1. The rhythm-based gameplay may be challenging for some. 2. Performance issues might occur on lower-end PCs. 3. Some musical elements may be complex to follow.",
+        "1. Practice rhythm synchronization to improve gameplay. 2. Explore all areas for hidden musical elements. 3. Adjust game settings for optimal performance."
+    )
+
+    add_game(
+        "AdventureQuest 8-Bit: Dungeons & DoomKnights (PC, Switch)",
+        "AdventureQuest 8-Bit: Dungeons & DoomKnights is a retro-inspired RPG with pixel art and classic gameplay mechanics.",
+        "1. Familiarize yourself with classic RPG mechanics. 2. Explore dungeons thoroughly for loot and secrets. 3. Use strategy in battles to overcome tough enemies.",
+        "1. Retro graphics may not appeal to everyone. 2. Combat mechanics can be basic. 3. Some dungeons may be repetitive.",
+        "1. Embrace the retro aesthetic for a nostalgic experience. 2. Plan your strategy for battles and exploration. 3. Take breaks to avoid burnout in lengthy dungeon crawls."
+    )
+
+    add_game(
+        "Apollo Justice Ace Attorney Trilogy (Switch)",
+        "Apollo Justice Ace Attorney Trilogy includes the first three games featuring Apollo Justice, with updated graphics and enhanced gameplay.",
+        "1. Pay close attention to evidence and witness testimonies. 2. Use logical deductions to solve cases. 3. Explore dialogue options thoroughly for clues.",
+        "1. Some puzzles may be challenging. 2. The game’s dialogue-heavy nature may be slow for some. 3. Performance issues might occur on lower-end Switch models.",
+        "1. Save frequently to avoid losing progress. 2. Review case files and evidence carefully. 3. Engage with all characters to gather comprehensive information."
+    )
+
+    add_game(
+        "Go Mecha Ball (Xbox Series X|S, Xbox One, PC)",
+        "Go Mecha Ball is a fast-paced action game where players control mechs in competitive ball-based sports.",
+        "1. Master the controls for precise movements. 2. Develop strategies for ball control and scoring. 3. Play with friends to enhance the experience.",
+        "1. The controls may take time to master. 2. Performance issues may occur on older PCs. 3. The game may have a steep learning curve.",
+        "1. Practice regularly to improve your skills. 2. Communicate with teammates for better coordination. 3. Explore different strategies for different game modes."
+    )
+
+    add_game(
+        "Phantom Abyss (PC, Xbox Series X|S)",
+        "Phantom Abyss is a first-person platformer where players navigate procedurally generated temples filled with traps and challenges.",
+        "1. Learn from each attempt to improve your skills. 2. Observe traps and patterns to avoid them. 3. Use your tools and abilities wisely.",
+        "1. The procedurally generated nature can lead to unpredictable challenges. 2. Performance issues might occur on less powerful PCs. 3. Some traps may be difficult to anticipate.",
+        "1. Take your time to learn trap patterns. 2. Experiment with different strategies for navigating temples. 3. Utilize in-game tips and tools to aid your progress."
+    )
+
+    add_game(
+        "RIN: The Last Child (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "RIN: The Last Child is an action-adventure game with a focus on emotional storytelling and exploration.",
+        "1. Engage with the story to fully appreciate the game. 2. Explore different areas to find hidden content. 3. Use abilities and upgrades to progress.",
+        "1. The emotional content may be intense. 2. Some sections may require multiple attempts to complete. 3. Performance can vary across different platforms.",
+        "1. Immerse yourself in the narrative for a richer experience. 2. Explore thoroughly to uncover all content. 3. Save frequently to retain progress."
+    )
+
+    add_game(
+        "Under Night In-Birth II Sys:Celes (PS5, PS4, Switch, PC)",
+        "Under Night In-Birth II Sys:Celes is a fighting game with a deep roster of characters and intricate combat mechanics.",
+        "1. Learn each character’s unique moves and combos. 2. Practice in training mode to improve your skills. 3. Explore different strategies for competitive play.",
+        "1. The combat mechanics may have a steep learning curve. 2. Performance issues on older consoles or PCs. 3. Online play may have connectivity issues.",
+        "1. Practice regularly to master your chosen character. 2. Experiment with different characters to find your preferred style. 3. Stay updated with game patches and balance changes."
+    )
+
+    add_game(
+        "Like a Dragon: Infinite Wealth (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Like a Dragon: Infinite Wealth is an RPG with a focus on narrative and character development in a detailed open world.",
+        "1. Engage with the story and side quests for a full experience. 2. Develop your character's skills and abilities. 3. Explore the open world to uncover hidden content.",
+        "1. The open-world nature can lead to performance issues. 2. Some quests may be lengthy or complex. 3. Performance may vary across different platforms.",
+        "1. Balance main story progress with side quests. 2. Explore thoroughly to find all content. 3. Save often to preserve your progress."
+    )
+
+    add_game(
+        "Tekken 8 (PS5, Xbox Series X|S, PC)",
+        "Tekken 8 is the latest installment in the popular fighting game series, featuring new characters and enhanced graphics.",
+        "1. Master each character’s unique moves and combos. 2. Practice in training mode to improve your skills. 3. Explore different strategies for competitive play.",
+        "1. The new mechanics may have a learning curve. 2. Performance issues on lower-end systems. 3. Some characters may feel overpowered or underpowered.",
+        "1. Practice regularly to refine your skills. 2. Experiment with different characters and playstyles. 3. Stay updated with balance changes and patches."
+    )
+
+    add_game(
+        "Chronique des Silencieux (PC)",
+        "Chronique des Silencieux is a narrative-driven RPG with a focus on deep storytelling and immersive world-building.",
+        "1. Pay attention to character interactions and story details. 2. Explore the world to uncover hidden lore and quests. 3. Make decisions that affect the narrative outcomes.",
+        "1. The story-heavy nature may slow down gameplay. 2. Some narrative elements may be complex. 3. Performance may vary based on system specs.",
+        "1. Engage with the story to fully appreciate the game. 2. Explore thoroughly to uncover all content. 3. Use in-game resources to help with complex narrative elements."
+    )
+
+    add_game(
+        "Rugby 24 (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Rugby 24 is a sports simulation game focusing on realistic rugby gameplay and tactics.",
+        "1. Master the controls for accurate gameplay. 2. Develop strategies for different game situations. 3. Use training modes to improve your skills.",
+        "1. The gameplay may be complex for newcomers. 2. Performance issues on lower-end systems. 3. Some features may require in-game purchases.",
+        "1. Practice regularly to improve your skills. 2. Experiment with different strategies and tactics. 3. Engage with the community for tips and advice."
+    )
+
+    add_game(
+        "Silent Hill: The Short Message (PS5)",
+        "Silent Hill: The Short Message is a psychological horror game that brings a new twist to the Silent Hill series with a focus on eerie atmosphere and unsettling experiences.",
+        "1. Use stealth and caution to navigate the horror elements. 2. Explore the environment thoroughly for clues and items. 3. Pay attention to audio cues for a better experience.",
+        "1. The game’s horror elements may be intense for some players. 2. Some sections may be difficult to progress through. 3. Performance may vary based on console capabilities.",
+        "1. Prepare for a chilling and intense experience. 2. Take your time to explore and understand the environment. 3. Utilize in-game resources to help with difficult sections."
+    )
+    add_game(
+        "Boxes: Lost Fragments (PC)",
+        "Boxes: Lost Fragments is a puzzle adventure game where players solve intricate puzzles to uncover a mysterious story.",
+        "1. Think outside the box to solve complex puzzles. 2. Explore every corner for hidden clues. 3. Use items in creative ways to progress.",
+        "1. Puzzles may be challenging for some players. 2. The story might be slow to develop. 3. Performance issues on lower-end PCs.",
+        "1. Take your time with each puzzle to avoid frustration. 2. Use hints if you’re stuck. 3. Explore thoroughly for hidden elements."
+    )
+
+    add_game(
+        "Granblue Fantasy: Relink (PS5, PS4, PC)",
+        "Granblue Fantasy: Relink is an action RPG with an emphasis on fast-paced combat and deep character customization.",
+        "1. Master different character abilities for effective combat. 2. Explore the world for loot and upgrades. 3. Coordinate with teammates for multiplayer missions.",
+        "1. The combat system may be complex. 2. Performance issues on older systems. 3. Multiplayer coordination might be challenging.",
+        "1. Practice combat mechanics in training mode. 2. Communicate with teammates for better coordination. 3. Explore all areas for hidden items."
+    )
+
+    add_game(
+        "Project Demigod (Quest 2, Quest 3, Quest Pro, PC VR)",
+        "Project Demigod is an immersive VR action game featuring god-like powers and epic battles.",
+        "1. Use VR motion controls to perform powerful attacks. 2. Learn and master different abilities. 3. Explore the VR environment for secrets and upgrades.",
+        "1. The VR controls may take time to master. 2. Performance issues on less powerful VR setups. 3. The game’s action may be intense for some.",
+        "1. Spend time familiarizing yourself with VR controls. 2. Experiment with different abilities for optimal play. 3. Take breaks to avoid VR fatigue."
+    )
+
+    add_game(
+        "Jujutsu Kaisen Cursed Clash (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Jujutsu Kaisen Cursed Clash is a fighting game based on the popular anime series, featuring dynamic combat and character abilities.",
+        "1. Learn character moves and combos for effective fighting. 2. Use special abilities strategically in battles. 3. Explore different characters to find your preferred playstyle.",
+        "1. The fighting mechanics may have a steep learning curve. 2. Performance issues on lower-end systems. 3. Some characters may feel unbalanced.",
+        "1. Practice regularly to improve your skills. 2. Experiment with different characters and strategies. 3. Stay updated with game patches for balance changes."
+    )
+
+    add_game(
+        "Suicide Squad: Kill the Justice League (PS5, Xbox Series X|S, PC)",
+        "Suicide Squad: Kill the Justice League is an action-adventure game where players control members of the Suicide Squad on a mission to take down the Justice League.",
+        "1. Master each character's unique abilities for effective combat. 2. Work with your team to complete missions. 3. Explore the open world for additional content and upgrades.",
+        "1. The game’s combat mechanics may be complex. 2. Performance issues on older systems. 3. Some missions may be challenging to complete.",
+        "1. Communicate with your team for better coordination. 2. Explore the open world to find hidden content. 3. Use character abilities strategically in combat."
+    )
+
+    add_game(
+        "Persona 3 Reload (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Persona 3 Reload is a remake of the classic JRPG with updated graphics and gameplay, featuring a blend of social simulation and dungeon crawling.",
+        "1. Build relationships with other characters to enhance gameplay. 2. Explore dungeons for valuable items and experience. 3. Manage your time effectively between social activities and combat.",
+        "1. The social simulation elements may be slow for some players. 2. Performance issues on lower-end systems. 3. Some dungeon sections can be repetitive.",
+        "1. Focus on balancing social activities with dungeon exploration. 2. Use character relationships to gain advantages in combat. 3. Save frequently to avoid losing progress."
+    )
+
+    add_game(
+        "Clem (PC, Switch)",
+        "Clem is a narrative-driven adventure game with a focus on character development and emotional storytelling.",
+        "1. Engage deeply with the story for a richer experience. 2. Explore the game world for additional narrative elements. 3. Make choices that affect the story’s outcome.",
+        "1. The story-heavy nature might be slow-paced for some players. 2. Performance issues on lower-end systems. 3. Some story elements may be emotionally intense.",
+        "1. Take your time to fully engage with the narrative. 2. Explore thoroughly to uncover all story elements. 3. Use in-game decisions to influence the story’s direction."
+    )
+
+    add_game(
+        "Touhou Danmaku Dagura Phantasia Lost (PC)",
+        "Touhou Danmaku Dagura Phantasia Lost is a bullet hell shooter featuring fast-paced gameplay and intricate bullet patterns.",
+        "1. Learn enemy patterns to avoid incoming attacks. 2. Use power-ups effectively to enhance your survivability. 3. Practice regularly to improve your dodging skills.",
+        "1. The bullet hell gameplay can be overwhelming for newcomers. 2. Performance issues on lower-end PCs. 3. The game may require precise timing and reflexes.",
+        "1. Practice dodging and shooting to improve your skills. 2. Use power-ups strategically to gain an advantage. 3. Stay calm during intense sections to maintain control."
+    )
+
+    add_game(
+        "Helldivers 2 (PS5, PC)",
+        "Helldivers 2 is a cooperative twin-stick shooter featuring intense combat and teamwork.",
+        "1. Communicate with your team for effective strategy. 2. Master the twin-stick controls for precise aiming. 3. Explore different weapon and equipment combinations.",
+        "1. The cooperative nature may require good teamwork. 2. Performance issues on lower-end PCs. 3. Some missions may be challenging without coordination.",
+        "1. Work closely with your team for better results. 2. Practice aiming and shooting to improve your skills. 3. Experiment with different loadouts to find what works best."
+    )
+
+    add_game(
+        "Konosuba - God's Blessing On This Wonderful World! Love For These Clothes Of Desire (PC, PS4, Switch)",
+        "Konosuba - God's Blessing On This Wonderful World! Love For These Clothes Of Desire is a visual novel and adventure game with a focus on humor and character interactions.",
+        "1. Engage with characters to uncover different storylines. 2. Explore various dialogue options for diverse outcomes. 3. Enjoy the humor and unique scenarios presented in the game.",
+        "1. The visual novel format may not appeal to everyone. 2. Performance issues on lower-end systems. 3. The game’s humor may not resonate with all players.",
+        "1. Explore all dialogue options to experience different storylines. 2. Embrace the humor for a more enjoyable experience. 3. Save frequently to explore different outcomes."
+    )
+
+    add_game(
+        "Banishers: Ghosts of New Eden (PS5, Xbox Series X|S, PC)",
+        "Banishers: Ghosts of New Eden is an action RPG with a focus on ghost-hunting and exploration in a haunted world.",
+        "1. Use different tools and abilities to deal with ghosts. 2. Explore the environment for clues and items. 3. Complete quests to uncover the story behind the hauntings.",
+        "1. The ghost-hunting mechanics may be complex. 2. Performance issues on older systems. 3. Some areas may be difficult to navigate.",
+        "1. Experiment with different tools to handle ghosts. 2. Thoroughly explore the environment for valuable items. 3. Follow questlines to piece together the story."
+    )
+
+    add_game(
+        "Lysfanga: The Time Shift Warrior (PC)",
+        "Lysfanga: The Time Shift Warrior is an action RPG where players manipulate time to overcome obstacles and enemies.",
+        "1. Use time manipulation strategically to solve puzzles. 2. Master combat techniques to defeat enemies. 3. Explore the world for hidden secrets and upgrades.",
+        "1. The time manipulation mechanics may take time to master. 2. Performance issues on lower-end PCs. 3. Some puzzles may be challenging.",
+        "1. Practice using time manipulation in different scenarios. 2. Explore thoroughly to find all secrets. 3. Use combat strategies to handle tougher enemies."
+    )
+
+    add_game(
+        "Ultros (PS5, PS4, PC)",
+        "Ultros is an action platformer with a focus on fast-paced gameplay and creative level design.",
+        "1. Master the controls for precise platforming. 2. Explore levels for hidden areas and collectibles. 3. Use power-ups to enhance your abilities.",
+        "1. The platforming mechanics may be challenging. 2. Performance issues on older systems. 3. Some levels may require precise timing.",
+        "1. Practice platforming sections to improve your skills. 2. Explore levels to uncover hidden content. 3. Utilize power-ups to aid in difficult sections."
+    )
+
+    add_game(
+        "Solim Infernum (PC)",
+        "Solim Infernum is a strategy game with a focus on building and managing a futuristic empire.",
+        "1. Develop your empire by managing resources and building structures. 2. Strategically deploy units and handle threats. 3. Explore and expand your territory.",
+        "1. The management aspects may be complex. 2. Performance issues on lower-end PCs. 3. Some strategic elements may be challenging.",
+        "1. Take time to learn the management mechanics. 2. Plan your strategies carefully to handle threats. 3. Explore different strategies to find what works best."
+    )
+
+    add_game(
+        "Sucker for Love: Date to Die For (PC)",
+        "Sucker for Love: Date to Die For is a visual novel with a horror twist, blending romance and dark themes.",
+        "1. Engage with characters to uncover different story paths. 2. Make choices that affect the outcome of the story. 3. Embrace the horror elements for a unique experience.",
+        "1. The horror themes may be intense for some players. 2. Performance issues on lower-end PCs. 3. The visual novel format may not appeal to everyone.",
+        "1. Explore all dialogue options to experience different outcomes. 2. Save frequently to explore various story paths. 3. Embrace the horror elements for a fuller experience."
+    )
+
+    add_game(
+        "Titanic: A Space Between (Quest)",
+        "Titanic: A Space Between is a VR adventure game set in an alternate Titanic universe, featuring exploration and mystery.",
+        "1. Explore the VR environment for hidden clues and items. 2. Interact with characters to uncover the story. 3. Use VR controls to navigate and solve puzzles.",
+        "1. The VR controls may take time to master. 2. Performance issues on less powerful VR setups. 3. Some puzzles may be challenging.",
+        "1. Spend time familiarizing yourself with VR controls. 2. Thoroughly explore the environment for hidden clues. 3. Interact with characters to piece together the story."
+    )
+
+    add_game(
+        "Tomb Raider 1-3 Remastered (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Tomb Raider 1-3 Remastered features updated graphics and gameplay for the classic Tomb Raider trilogy.",
+        "1. Explore each level thoroughly for secrets and collectibles. 2. Master the classic gameplay mechanics with updated controls. 3. Solve puzzles and defeat enemies to progress.",
+        "1. The classic gameplay may feel dated for some players. 2. Performance issues on lower-end systems. 3. Some puzzles may require trial and error.",
+        "1. Use updated controls to improve your gameplay experience. 2. Explore thoroughly to find all secrets. 3. Solve puzzles patiently to progress."
+    )
+
+    add_game(
+        "Clash II (PC)",
+        "Clash II is an action game featuring strategic combat and character customization.",
+        "1. Develop strategies to handle various combat scenarios. 2. Customize your character to fit your playstyle. 3. Explore the game world for upgrades and secrets.",
+        "1. The strategic elements may be complex. 2. Performance issues on older PCs. 3. Some combat scenarios may be challenging.",
+        "1. Experiment with different strategies to find what works best. 2. Customize your character to suit your playstyle. 3. Explore thoroughly for valuable upgrades."
+    )
+
+    add_game(
+        "Gunvolt Records Cychronicle (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Gunvolt Records Cychronicle is a fast-paced action game with a focus on rhythm-based combat.",
+        "1. Master rhythm-based combat to achieve high scores. 2. Explore different levels for unique challenges. 3. Customize your character with various upgrades.",
+        "1. The rhythm-based combat may be challenging for some players. 2. Performance issues on lower-end systems. 3. Some levels may be difficult to complete.",
+        "1. Practice rhythm-based combat to improve your skills. 2. Explore levels to discover new challenges. 3. Use character upgrades to enhance your abilities."
+    )
+
+    add_game(
+        "PlateUp! (PS5, PS4, Xbox Series X|S, Switch)",
+        "PlateUp! is a cooperative cooking simulation game with a focus on managing a restaurant.",
+        "1. Work together with your team to manage the restaurant efficiently. 2. Learn and master different recipes and cooking techniques. 3. Handle customer orders quickly and accurately.",
+        "1. The cooperative gameplay requires good communication. 2. Performance issues on lower-end systems. 3. Some recipes may be challenging to master.",
+        "1. Communicate effectively with your team for better management. 2. Practice recipes to improve cooking speed. 3. Handle customer orders promptly to keep them satisfied."
+    )
+
+    add_game(
+        "RC Revolution (PC)",
+        "RC Revolution is a racing game featuring customizable remote-controlled cars and various tracks.",
+        "1. Customize your RC car for optimal performance. 2. Learn each track layout to improve your racing skills. 3. Compete in different modes to unlock new content.",
+        "1. The racing mechanics may be complex for some players. 2. Performance issues on older PCs. 3. Some tracks may be challenging to master.",
+        "1. Experiment with different car customizations to find what works best. 2. Practice on tracks to improve your skills. 3. Compete in various modes to unlock new content."
+    )
+
+    add_game(
+        "Survivorman VR: The Descent (PSVR 2, PC VR)",
+        "Survivorman VR: The Descent is a survival VR game featuring exploration and resource management in a dangerous environment.",
+        "1. Manage resources carefully to survive in the harsh environment. 2. Explore the VR world for useful items and shelter. 3. Use VR controls to navigate and interact with the environment.",
+        "1. The survival mechanics may be challenging. 2. Performance issues on less powerful VR setups. 3. The environment may be difficult to navigate.",
+        "1. Practice VR controls to improve your navigation skills. 2. Explore thoroughly to find essential resources. 3. Manage your resources wisely to ensure survival."
+    )
+
+    add_game(
+        "Mario vs. Donkey Kong (Switch)",
+        "Mario vs. Donkey Kong is a puzzle platformer where players navigate through levels filled with obstacles and enemies.",
+        "1. Solve puzzles to progress through levels. 2. Use Mario’s abilities to overcome obstacles. 3. Collect items and power-ups to aid in your quest.",
+        "1. The puzzle mechanics may be challenging for some players. 2. Performance issues on older systems. 3. Some levels may require trial and error.",
+        "1. Take your time to solve puzzles and avoid frustration. 2. Use power-ups strategically to aid in difficult sections. 3. Practice levels to improve your skills."
+    )
+
+    add_game(
+        "Skull and Bones (PS5, Xbox Series X|S, PC)",
+        "Skull and Bones is a pirate-themed action game featuring naval combat and exploration.",
+        "1. Master naval combat to engage in ship battles effectively. 2. Explore the open sea for resources and treasure. 3. Customize your ship for better performance in battles.",
+        "1. The naval combat system may be complex. 2. Performance issues on older systems. 3. Some battles may be difficult to win.",
+        "1. Practice naval combat to improve your skills. 2. Explore the sea to find valuable resources. 3. Customize your ship to fit your playstyle."
+    )
+
+    add_game(
+        "Furnish Master (PC)",
+        "Furnish Master is a simulation game focusing on interior design and home decoration.",
+        "1. Use various furniture and decor items to design beautiful interiors. 2. Complete design challenges to earn rewards. 3. Experiment with different styles and layouts.",
+        "1. The design mechanics may be complex for some players. 2. Performance issues on older PCs. 3. Some design challenges may be difficult.",
+        "1. Experiment with different design styles to find what works best. 2. Take your time with each design challenge. 3. Use available tools and resources to enhance your designs."
+    )
+
+    add_game(
+        "Nightingale (PC early access)",
+        "Nightingale is a survival game set in a fantastical world, featuring crafting and exploration elements.",
+        "1. Gather resources and craft items to survive. 2. Explore the world to uncover its secrets. 3. Build and manage your base effectively.",
+        "1. As an early access game, it may have bugs and incomplete features. 2. Performance issues on lower-end PCs. 3. Some mechanics may not be fully developed.",
+        "1. Expect some bugs and incomplete features in early access. 2. Explore thoroughly to find resources and secrets. 3. Manage your base efficiently for better survival."
+    )
+
+    add_game(
+        "Qomp2 (Xbox Series X|S, Xbox One, PS5, PS4, Switch, PC)",
+        "Qomp2 is a puzzle-platformer featuring challenging levels and unique mechanics.",
+        "1. Solve puzzles to progress through levels. 2. Use unique mechanics to overcome obstacles. 3. Explore each level for hidden secrets and collectibles.",
+        "1. The puzzles may be difficult for some players. 2. Performance issues on older systems. 3. Some levels may require trial and error.",
+        "1. Take your time to solve puzzles and avoid frustration. 2. Use unique mechanics to navigate obstacles. 3. Explore levels thoroughly for hidden content."
+    )
+
+    add_game(
+        "The Lost Legends of Redwall: Feast & Friends (PC, PS5, Xbox Series X|S)",
+        "The Lost Legends of Redwall: Feast & Friends is an adventure game set in the Redwall universe, featuring a mix of exploration and puzzle-solving.",
+        "1. Explore the Redwall universe to uncover secrets. 2. Solve puzzles to progress through the story. 3. Interact with characters to learn more about the world.",
+        "1. The adventure may be complex for some players. 2. Performance issues on lower-end systems. 3. Some puzzles may be challenging.",
+        "1. Explore thoroughly to find hidden secrets. 2. Solve puzzles carefully to progress. 3. Interact with characters for additional story elements."
+    )
+
+    add_game(
+        "The Lost Legends of Redwall: The Scout Anthology (PC, PS5, Xbox Series X|S)",
+        "The Lost Legends of Redwall: The Scout Anthology is a compilation of stories set in the Redwall universe, featuring a mix of narrative and gameplay.",
+        "1. Explore different stories to uncover the Redwall universe. 2. Engage with the narrative elements for a richer experience. 3. Solve puzzles and complete challenges to progress.",
+        "1. The narrative may be complex for some players. 2. Performance issues on older systems. 3. Some challenges may be difficult to complete.",
+        "1. Engage with the narrative to fully experience the game. 2. Solve puzzles to progress through stories. 3. Explore thoroughly to uncover all content."
+    )
+
+    add_game(
+        "Warhammer 40,000: Chaos Gate - Daemonhunters (PS5, PS4, Xbox Series X|S, Xbox One)",
+        "Warhammer 40,000: Chaos Gate - Daemonhunters is a tactical strategy game set in the Warhammer 40,000 universe, featuring turn-based combat and strategic gameplay.",
+        "1. Develop strategies to handle turn-based combat effectively. 2. Manage resources and units carefully. 3. Explore the Warhammer 40,000 universe for additional challenges.",
+        "1. The tactical gameplay may be complex for some players. 2. Performance issues on older systems. 3. Some combat scenarios may be challenging.",
+        "1. Take time to develop and execute strategies. 2. Manage resources and units efficiently. 3. Explore the universe for additional challenges."
+    )
+
+    add_game(
+        "Last Epoch (PC)",
+        "Last Epoch is an action RPG featuring an expansive world and deep customization options.",
+        "1. Explore the world and engage in combat to level up. 2. Customize your character with various skills and gear. 3. Participate in endgame content for additional challenges.",
+        "1. The RPG mechanics may be complex for some players. 2. Performance issues on older PCs. 3. Some endgame content may be difficult to complete.",
+        "1. Experiment with different character builds to find what works best. 2. Explore the world thoroughly for hidden content. 3. Participate in endgame content for additional challenges."
+    )
+
+    add_game(
+        "Myth of Empires (PC)",
+        "Myth of Empires is a sandbox MMO featuring open-world combat and base-building mechanics.",
+        "1. Build and manage your base to expand your empire. 2. Engage in open-world combat with other players. 3. Gather resources and craft items for survival.",
+        "1. The sandbox elements may be overwhelming for new players. 2. Performance issues on lower-end PCs. 3. Some combat encounters may be challenging.",
+        "1. Take your time to learn the sandbox mechanics. 2. Build and manage your base carefully. 3. Engage in combat strategically to succeed."
+    )
+
+    add_game(
+        "Penny's Big Breakaway (PS5, Xbox Series X|S, Switch, PC)",
+        "Penny's Big Breakaway is a platformer featuring fast-paced gameplay and unique power-ups.",
+        "1. Master the platforming mechanics to navigate levels efficiently. 2. Use power-ups strategically to overcome obstacles. 3. Collect items and complete challenges for additional rewards.",
+        "1. The platforming mechanics may be challenging for some players. 2. Performance issues on older systems. 3. Some levels may require precise timing.",
+        "1. Practice platforming skills to improve performance. 2. Use power-ups effectively to aid in difficult sections. 3. Collect items and complete challenges for rewards."
+    )
+
+    add_game(
+        "Pocket Card Jockey: Ride On (Switch)",
+        "Pocket Card Jockey: Ride On is a unique blend of card game mechanics and horse racing.",
+        "1. Use card game mechanics to influence horse racing outcomes. 2. Strategically manage your cards to improve performance. 3. Participate in races and complete challenges for rewards.",
+        "1. The blend of card game and racing mechanics may be complex. 2. Performance issues on older systems. 3. Some races may require strategic card management.",
+        "1. Learn the card game mechanics to improve racing outcomes. 2. Manage your cards strategically for better performance. 3. Participate in races to earn rewards."
+    )
+
+    add_game(
+        "Slave Zero X (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Slave Zero X is an action game featuring mech combat and a futuristic setting.",
+        "1. Master mech combat mechanics to excel in battles. 2. Explore the futuristic world for upgrades and secrets. 3. Customize your mech for different combat scenarios.",
+        "1. The mech combat system may be complex for some players. 2. Performance issues on older systems. 3. Some battles may be challenging.",
+        "1. Practice mech combat to improve your skills. 2. Explore the world for upgrades and secrets. 3. Customize your mech for different combat scenarios."
+    )
+
+    add_game(
+        "Terminator Dark Fate - Defiance (PC)",
+        "Terminator Dark Fate - Defiance is a first-person shooter set in the Terminator universe, featuring intense combat and futuristic weapons.",
+        "1. Master the combat mechanics to defeat enemies effectively. 2. Explore the environment for weapons and upgrades. 3. Complete missions to progress through the story.",
+        "1. The combat may be intense for some players. 2. Performance issues on lower-end systems. 3. Some missions may be challenging.",
+        "1. Practice combat skills to improve your effectiveness. 2. Explore thoroughly for weapons and upgrades. 3. Complete missions to progress through the story."
+    )
+
+    add_game(
+        "CorpoNation: The Sorting Process (PC)",
+        "CorpoNation: The Sorting Process is a simulation game where you manage a corporate sorting facility in a dystopian future.",
+        "1. Manage the sorting process efficiently to meet quotas. 2. Handle various tasks and challenges in the facility. 3. Explore the dystopian world for additional story elements.",
+        "1. The simulation mechanics may be complex. 2. Performance issues on older systems. 3. Some tasks may be challenging.",
+        "1. Learn the simulation mechanics thoroughly. 2. Manage tasks efficiently to meet quotas. 3. Explore the world to uncover story elements."
+    )
+
+    add_game(
+        "Garden Life: A Cozy Life Simulator (PS5, PS4, Xbox Series X|S, PC)",
+        "Garden Life: A Cozy Life Simulator is a life simulation game focusing on gardening and home management.",
+        "1. Manage your garden and home to create a cozy environment. 2. Engage in various activities to improve your lifestyle. 3. Customize your garden and home to your liking.",
+        "1. The simulation mechanics may be complex for some players. 2. Performance issues on older systems. 3. Some activities may require time investment.",
+        "1. Take time to learn the simulation mechanics. 2. Customize your garden and home to fit your style. 3. Engage in activities to improve your lifestyle."
+    )
+
+    add_game(
+        "Inkulinati (Xbox Series X|S, Xbox One, Switch, PC)",
+        "Inkulinati is a strategy game featuring hand-drawn art and turn-based combat.",
+        "1. Develop strategies for turn-based combat. 2. Use hand-drawn art to create unique units and abilities. 3. Explore different strategies for success.",
+        "1. The strategy mechanics may be complex. 2. Performance issues on lower-end systems. 3. Some strategies may be difficult to execute.",
+        "1. Develop and refine your strategies for better results. 2. Use hand-drawn art to your advantage. 3. Experiment with different approaches for success."
+    )
+
+    add_game(
+        "Nyaaaanvy (Switch, PC)",
+        "Nyaaaanvy is a cat-themed action game featuring fast-paced combat and exploration.",
+        "1. Master combat mechanics to defeat enemies. 2. Explore the game world for hidden items and upgrades. 3. Use various abilities to overcome obstacles.",
+        "1. The combat system may be challenging for some players. 2. Performance issues on older systems. 3. Some levels may require precise timing.",
+        "1. Practice combat to improve your skills. 2. Explore thoroughly for hidden items and upgrades. 3. Use abilities strategically to overcome obstacles."
+    )
+
+    add_game(
+        "Pacific Drive (PS5, PC)",
+        "Pacific Drive is a first-person driving game featuring exploration and survival elements.",
+        "1. Explore the environment to uncover secrets and resources. 2. Manage your vehicle and fuel effectively. 3. Navigate through various terrains and challenges.",
+        "1. The driving mechanics may be complex for some players. 2. Performance issues on older systems. 3. Some terrains may be challenging to navigate.",
+        "1. Practice driving mechanics to improve your skills. 2. Manage your vehicle and fuel carefully. 3. Explore thoroughly to find resources and secrets."
+    )
+
+    add_game(
+        "Lost Legends of Redwall: Feast & Friends (Switch, PC)",
+        "Lost Legends of Redwall: Feast & Friends is an adventure game set in the Redwall universe, featuring a mix of exploration and puzzle-solving.",
+        "1. Explore the Redwall universe to uncover secrets. 2. Solve puzzles to progress through the story. 3. Interact with characters to learn more about the world.",
+        "1. The adventure may be complex for some players. 2. Performance issues on lower-end systems. 3. Some puzzles may be challenging.",
+        "1. Explore thoroughly to find hidden secrets. 2. Solve puzzles carefully to progress. 3. Interact with characters for additional story elements."
+    )
+    add_game(
+        "Master Detective Archives: Rain Code Plus (PS5, Xbox Series X|S, PC)",
+        "Master Detective Archives: Rain Code Plus is a mystery game where players solve crimes and uncover hidden truths in a thrilling narrative.",
+        "1. Analyze clues carefully to solve cases. 2. Engage with the storyline to uncover deeper mysteries. 3. Use deductive reasoning for effective crime-solving.",
+        "1. The complex narrative may be challenging for some players. 2. Performance issues on lower-end systems. 3. Some cases may require extensive investigation.",
+        "1. Pay attention to all clues for solving cases. 2. Engage deeply with the storyline for a richer experience. 3. Use deductive skills to crack difficult cases."
+    )
+
+    add_game(
+        "Throne and Liberty (PS5, Xbox Series X|S, PC)",
+        "Throne and Liberty is a fantasy RPG focusing on kingdom management, strategic combat, and deep lore.",
+        "1. Manage your kingdom efficiently for success. 2. Master combat mechanics for effective battles. 3. Explore the rich lore for a deeper understanding.",
+        "1. The kingdom management aspect may be complex. 2. Performance issues on older systems. 3. Strategic combat might have a steep learning curve.",
+        "1. Develop effective management strategies for your kingdom. 2. Practice combat mechanics to improve performance. 3. Explore lore for a more immersive experience."
+    )
+
+    add_game(
+        "Kill Knight (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Kill Knight is an action-adventure game featuring intense combat and a dark fantasy setting.",
+        "1. Master combat techniques for efficient fighting. 2. Explore the dark fantasy world for hidden secrets. 3. Use upgrades and skills strategically.",
+        "1. The combat system may be difficult for new players. 2. Performance issues on lower-end systems. 3. The dark fantasy setting might be intense for some.",
+        "1. Practice combat techniques to improve your skills. 2. Explore the world thoroughly for secrets. 3. Use upgrades strategically to enhance your abilities."
+    )
+
+    add_game(
+        "MechWarrior 5: Clans (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "MechWarrior 5: Clans is a mech-based combat game featuring strategic battles and customization options.",
+        "1. Customize your mechs for optimal performance. 2. Develop strategies for effective combat. 3. Explore different missions and scenarios.",
+        "1. The customization options might be overwhelming. 2. Performance issues on older systems. 3. Strategic depth may require a learning curve.",
+        "1. Experiment with mech customization for better performance. 2. Develop strategies for various combat scenarios. 3. Explore missions to enhance your experience."
+    )
+
+    add_game(
+        "Until Dawn (PS5, PC)",
+        "Until Dawn is a horror adventure game with branching storylines and survival elements.",
+        "1. Make strategic decisions to influence the story. 2. Pay attention to details for survival. 3. Engage with characters for a deeper experience.",
+        "1. The horror elements may be intense for some players. 2. Performance issues on older systems. 3. Branching storylines might be complex.",
+        "1. Make careful decisions to impact the story. 2. Pay attention to details to enhance survival chances. 3. Engage with characters for a richer experience."
+    )
+
+    add_game(
+        "Diablo IV: Vessel of Hatred (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Diablo IV: Vessel of Hatred is an action RPG with dark themes and intense combat.",
+        "1. Master combat mechanics for effective gameplay. 2. Explore the dark world for hidden loot. 3. Customize your character for optimal performance.",
+        "1. The dark themes may not appeal to everyone. 2. Performance issues on older systems. 3. The combat system may be challenging.",
+        "1. Practice combat techniques for better performance. 2. Explore thoroughly to find valuable loot. 3. Customize your character to suit your play style."
+    )
+
+    add_game(
+        "Silent Hill 2 (PS5, PC)",
+        "Silent Hill 2 is a classic survival horror game known for its atmospheric storytelling and psychological horror elements.",
+        "1. Explore the environment for clues and survival items. 2. Engage with the story for a deeper understanding of the horror. 3. Solve puzzles to progress through the game.",
+        "1. The psychological horror may be intense for some players. 2. Performance issues on modern systems. 3. Puzzles may be challenging.",
+        "1. Pay close attention to the environment for clues. 2. Engage with the story for a richer experience. 3. Solve puzzles to advance through the game."
+    )
+
+    add_game(
+        "Amber Isle (PC)",
+        "Amber Isle is a colorful exploration game set in a vibrant fantasy world with a focus on discovery and adventure.",
+        "1. Explore the vibrant world for hidden secrets. 2. Interact with characters for additional quests. 3. Enjoy the colorful art style and environment.",
+        "1. The exploration-based gameplay may be slow-paced for some. 2. Performance issues on lower-end systems. 3. The focus on discovery might not suit everyone.",
+        "1. Take your time to explore for hidden secrets. 2. Engage with characters for additional content. 3. Appreciate the colorful art style as part of the experience."
+    )
+
+    add_game(
+        "Fantasy Life i: The Girl Who Steals Time (Switch)",
+        "Fantasy Life i: The Girl Who Steals Time is a life simulation game with a focus on time manipulation and character interactions.",
+        "1. Use time manipulation effectively to solve problems. 2. Engage in various life simulation activities. 3. Interact with characters to enhance the story.",
+        "1. Time manipulation mechanics may be complex. 2. Performance issues on older systems. 3. The life simulation aspects might be repetitive.",
+        "1. Master time manipulation for better gameplay. 2. Engage in diverse activities to enhance the experience. 3. Interact with characters for additional story elements."
+    )
+
+    add_game(
+        "Sky Oceans: Wings For Hire (PC, consoles)",
+        "Sky Oceans: Wings For Hire is a flight simulation game with a focus on aerial combat and exploration.",
+        "1. Master flight controls for effective aerial combat. 2. Explore the open skies for hidden missions and challenges. 3. Customize your aircraft for optimal performance.",
+        "1. The flight controls may be complex for new players. 2. Performance issues on older systems. 3. Aerial combat might have a steep learning curve.",
+        "1. Practice flight controls to improve your skills. 2. Explore the skies for additional content and challenges. 3. Customize your aircraft for better performance."
+    )
+
+    add_game(
+        "Dragon Ball: Sparking Zero (PS5, Xbox Series X|S, PC)",
+        "Dragon Ball: Sparking Zero is a fighting game featuring characters from the Dragon Ball universe with fast-paced combat and special abilities.",
+        "1. Master character abilities for effective fighting. 2. Use special moves strategically in battles. 3. Explore different game modes for varied experiences.",
+        "1. The fast-paced combat may be overwhelming. 2. Performance issues on older systems. 3. Balancing characters might be challenging.",
+        "1. Practice character abilities to enhance your performance. 2. Use special moves strategically in battles. 3. Explore various game modes for a richer experience."
+    )
+
+    add_game(
+        "Metaphor: ReFantazio (PS5, PS4, Xbox Series X|S, PC)",
+        "Metaphor: ReFantazio is a narrative-driven RPG with a focus on fantasy themes and character development.",
+        "1. Engage with the narrative to fully appreciate the story. 2. Develop characters for optimal performance. 3. Explore the fantasy world for additional content.",
+        "1. The narrative may be complex for some players. 2. Performance issues on older systems. 3. Character development may require a learning curve.",
+        "1. Focus on the narrative for a deeper experience. 2. Develop characters to enhance gameplay. 3. Explore the world to uncover hidden content."
+    )
+
+    add_game(
+        "Starship Troopers: Extermination (PS5, Xbox Series X|S, PC)",
+        "Starship Troopers: Extermination is a sci-fi action game focusing on cooperative combat and defense against alien threats.",
+        "1. Coordinate with teammates for effective defense. 2. Use a variety of weapons and strategies to combat aliens. 3. Explore different maps for strategic advantages.",
+        "1. Cooperative gameplay may require teamwork. 2. Performance issues on older systems. 3. The intensity of combat may be overwhelming for some.",
+        "1. Communicate with your team for better defense. 2. Experiment with different weapons and strategies. 3. Explore maps to find strategic advantages."
+    )
+
+    add_game(
+        "Transformers: Galactic Trials (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Transformers: Galactic Trials is an action game featuring iconic Transformers characters in a galactic setting with dynamic combat.",
+        "1. Master character abilities for effective combat. 2. Explore different settings for a diverse experience. 3. Use upgrades and power-ups strategically.",
+        "1. The combat system may be complex. 2. Performance issues on lower-end systems. 3. Some characters may require practice to master.",
+        "1. Practice character abilities for better combat performance. 2. Explore settings to enjoy diverse experiences. 3. Use upgrades and power-ups wisely."
+    )
+
+    add_game(
+        "Undisputed (PS5, Xbox Series X|S, PC)",
+        "Undisputed is a boxing simulation game featuring realistic mechanics and detailed fighter customization.",
+        "1. Master boxing techniques for competitive fights. 2. Customize fighters to enhance performance. 3. Engage in various game modes for a richer experience.",
+        "1. The realism might be challenging for some players. 2. Performance issues on older systems. 3. Customization options may be complex.",
+        "1. Practice boxing techniques to improve your skills. 2. Customize fighters for optimal performance. 3. Explore different game modes for varied experiences."
+    )
+
+    add_game(
+        "Age of Empires Mobile (iOS, Android)",
+        "Age of Empires Mobile is a strategy game bringing the classic Age of Empires experience to mobile devices with updated mechanics.",
+        "1. Develop strategies for efficient gameplay. 2. Manage resources effectively for success. 3. Explore new features and mechanics designed for mobile.",
+        "1. The strategy might be complex on mobile controls. 2. Performance issues on older devices. 3. Adapting to mobile mechanics may take time.",
+        "1. Develop and refine strategies for mobile gameplay. 2. Manage resources efficiently for success. 3. Explore new features and mechanics to enhance your experience."
+    )
+
+    add_game(
+        "A Quiet Place: The Road Ahead (PS5, Xbox Series X|S, PC)",
+        "A Quiet Place: The Road Ahead is a survival horror game inspired by the A Quiet Place film series, focusing on stealth and tension.",
+        "1. Use stealth tactics to avoid enemies. 2. Explore the environment for resources and clues. 3. Manage resources carefully to survive.",
+        "1. The stealth mechanics may be challenging for some players. 2. Performance issues on lower-end systems. 3. Resource management may be complex.",
+        "1. Practice stealth tactics to improve survival chances. 2. Explore thoroughly to find resources and clues. 3. Manage resources carefully for better gameplay."
+    )
+
+    add_game(
+        "Super Mario Party Jamboree (Switch)",
+        "Super Mario Party Jamboree is a party game featuring a variety of mini-games and competitive play with iconic Mario characters.",
+        "1. Participate in mini-games for competitive fun. 2. Use character abilities to your advantage. 3. Enjoy diverse game modes and challenges.",
+        "1. The mini-game variety might be overwhelming for some. 2. Performance issues on older hardware. 3. Competitive play may be intense.",
+        "1. Practice mini-games to improve performance. 2. Use character abilities strategically for an advantage. 3. Explore different game modes for a richer experience."
+    )
+
+    add_game(
+        "RetroRealms: Ash vs. Evil Dead (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "RetroRealms: Ash vs. Evil Dead is an action game with retro-style graphics and a focus on combat and horror elements inspired by the Evil Dead series.",
+        "1. Master combat mechanics for effective gameplay. 2. Explore retro-style environments for secrets. 3. Engage with the horror elements for an immersive experience.",
+        "1. The retro graphics might not appeal to everyone. 2. Performance issues on lower-end systems. 3. The horror elements may be intense.",
+        "1. Practice combat techniques for better performance. 2. Explore environments for hidden content. 3. Engage with horror elements for a richer experience."
+    )
+
+    add_game(
+        "RetroRealms: Halloween (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "RetroRealms: Halloween is a horror-themed action game with retro graphics and challenging gameplay inspired by classic horror tropes.",
+        "1. Master gameplay mechanics for effective survival. 2. Explore retro-themed environments for secrets. 3. Engage with the Halloween theme for an immersive experience.",
+        "1. The retro graphics and horror themes might not appeal to everyone. 2. Performance issues on older systems. 3. The gameplay may be challenging.",
+        "1. Practice gameplay mechanics to improve survival. 2. Explore environments thoroughly for hidden secrets. 3. Engage with the theme for a deeper experience."
+    )
+
+    add_game(
+        "Teenage Mutant Ninja Turtles: Mutants Unleashed (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Teenage Mutant Ninja Turtles: Mutants Unleashed is an action game featuring the iconic turtles in a new adventure with cooperative gameplay.",
+        "1. Master character abilities for effective combat. 2. Explore environments for hidden items and secrets. 3. Use teamwork in cooperative modes for better results.",
+        "1. The cooperative gameplay might require teamwork. 2. Performance issues on older systems. 3. Some combat challenges may be difficult.",
+        "1. Practice character abilities to improve combat skills. 2. Explore thoroughly for hidden items. 3. Work with teammates for better results in cooperative modes."
+    )
+
+    add_game(
+        "Unknown 9: Awakening (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Unknown 9: Awakening is an action-adventure game with a focus on exploration and supernatural abilities in a mysterious world.",
+        "1. Use supernatural abilities to solve puzzles and combat enemies. 2. Explore the mysterious world for hidden secrets. 3. Engage with the storyline for a richer experience.",
+        "1. The supernatural mechanics may be complex. 2. Performance issues on older systems. 3. The mysterious world might be challenging to navigate.",
+        "1. Master supernatural abilities for effective gameplay. 2. Explore the world thoroughly for hidden secrets. 3. Engage with the storyline for a deeper experience."
+    )
+
+    add_game(
+        "Worshippers of Cthulu (PC)",
+        "Worshippers of Cthulu is a strategy game with horror elements, focusing on managing cultists and performing rituals in a dark setting.",
+        "1. Manage cultists effectively for success. 2. Perform rituals to gain power and advance. 3. Explore the dark setting for additional content.",
+        "1. The horror elements may be intense for some players. 2. Performance issues on lower-end systems. 3. Managing cultists might be complex.",
+        "1. Develop effective strategies for managing cultists. 2. Perform rituals strategically to gain advantages. 3. Explore the setting to uncover additional content."
+    )
+
+    add_game(
+        "Fantasy Friends: Dream Worlds (PS5, PS4, Switch, PC)",
+        "Fantasy Friends: Dream Worlds is a life simulation game with a focus on interacting with magical creatures and exploring fantasy worlds.",
+        "1. Interact with magical creatures for unique experiences. 2. Explore fantasy worlds for hidden surprises. 3. Engage in various life simulation activities.",
+        "1. The life simulation aspects may be repetitive. 2. Performance issues on older systems. 3. Interacting with magical creatures might be complex.",
+        "1. Engage with magical creatures for a richer experience. 2. Explore fantasy worlds thoroughly. 3. Participate in diverse activities for a well-rounded experience."
+    )
+
+    add_game(
+        "Forest Hills: The Last Year (PC)",
+        "Forest Hills: The Last Year is an adventure game with survival elements set in a mysterious forest with a focus on exploration and narrative.",
+        "1. Explore the forest environment for survival and clues. 2. Engage with the narrative to uncover the story. 3. Use survival skills to manage resources effectively.",
+        "1. The survival elements may be challenging. 2. Performance issues on older systems. 3. The narrative might be complex for some players.",
+        "1. Explore the forest thoroughly for clues and resources. 2. Engage with the narrative for a deeper understanding. 3. Use survival skills to manage resources efficiently."
+    )
+
+    add_game(
+        "Zero Sievert (PC)",
+        "Zero Sievert is a post-apocalyptic RPG with a focus on survival, exploration, and combat in a desolate world.",
+        "1. Master survival mechanics to thrive in the wasteland. 2. Explore the desolate world for resources and secrets. 3. Engage in combat to protect yourself from threats.",
+        "1. The survival mechanics may be complex. 2. Performance issues on older systems. 3. The desolate environment might be overwhelming.",
+        "1. Practice survival mechanics for better performance. 2. Explore thoroughly to find resources and secrets. 3. Engage in combat strategically to protect yourself."
+    )
+
+    add_game(
+        "Flint: Treasure of Oblivion (PS5, Xbox Series X|S, PC)",
+        "Flint: Treasure of Oblivion is an action-adventure game with a focus on treasure hunting and combat in a richly detailed world.",
+        "1. Explore the world for hidden treasures and secrets. 2. Master combat techniques for effective gameplay. 3. Solve puzzles to advance in your treasure hunt.",
+        "1. The treasure hunting mechanics may be complex. 2. Performance issues on older systems. 3. Combat challenges might be difficult.",
+        "1. Explore thoroughly to find hidden treasures. 2. Practice combat techniques to improve performance. 3. Solve puzzles to progress in your treasure hunt."
+    )
+
+    add_game(
+        "Romancing Saga 2: Revenge of the Seven (PS5, PS4, Switch, PC)",
+        "Romancing Saga 2: Revenge of the Seven is a classic RPG featuring turn-based combat and a deep storyline with rich character development.",
+        "1. Master turn-based combat for effective gameplay. 2. Engage with the storyline for a deeper experience. 3. Develop characters to enhance their abilities.",
+        "1. The turn-based combat might be slow for some players. 2. Performance issues on older systems. 3. The deep storyline might be complex.",
+        "1. Practice turn-based combat for better performance. 2. Engage with the storyline to fully appreciate the game. 3. Develop characters strategically for improved gameplay."
+    )
+
+    add_game(
+        "Shin chan: Shiro and the Coal Town (Switch, PC)",
+        "Shin chan: Shiro and the Coal Town is an adventure game featuring Shin Chan in a whimsical and quirky adventure with puzzles and exploration.",
+        "1. Solve puzzles to advance in the adventure. 2. Explore whimsical environments for hidden content. 3. Engage with quirky characters for a fun experience.",
+        "1. The whimsical style might not appeal to everyone. 2. Performance issues on older systems. 3. Some puzzles may be challenging.",
+        "1. Solve puzzles to progress in the game. 2. Explore environments for hidden content. 3. Engage with characters for a fun and entertaining experience."
+    )
+
+    add_game(
+        "Barbie Project Friendship (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Barbie Project Friendship is a life simulation game focused on friendship-building and social activities with Barbie and friends.",
+        "1. Engage in social activities to build friendships. 2. Customize characters and environments for a personalized experience. 3. Participate in various mini-games for added fun.",
+        "1. The life simulation aspects may be repetitive. 2. Performance issues on older systems. 3. The focus on social activities might not appeal to everyone.",
+        "1. Engage in social activities to build and strengthen friendships. 2. Customize characters and environments to enhance your experience. 3. Participate in mini-games for additional entertainment."
+    )
+
+    add_game(
+        "Call of Duty: Black Ops 6 (PS5, PS4, Xbox Series X|S, Xbox One, PC)",
+        "Call of Duty: Black Ops 6 is a first-person shooter game featuring intense combat, diverse weapons, and a new storyline in the Black Ops series.",
+        "1. Master combat mechanics for competitive play. 2. Explore diverse weapons and equipment. 3. Engage with the storyline for a deeper experience.",
+        "1. The intense combat might be overwhelming for some. 2. Performance issues on older systems. 3. The new storyline might be complex.",
+        "1. Practice combat techniques to improve performance. 2. Explore different weapons and equipment for better gameplay. 3. Engage with the storyline to fully appreciate the game."
+    )
+
+    add_game(
+        "Sonic x Shadow Generations (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Sonic x Shadow Generations is a platformer game featuring Sonic and Shadow in a new adventure with fast-paced gameplay and challenging levels.",
+        "1. Master platforming mechanics for effective gameplay. 2. Explore levels for hidden items and secrets. 3. Utilize character abilities for an advantage.",
+        "1. The fast-paced gameplay might be challenging for some. 2. Performance issues on older systems. 3. Some levels may be difficult to navigate.",
+        "1. Practice platforming mechanics to improve performance. 2. Explore levels thoroughly for hidden items and secrets. 3. Utilize character abilities to gain an advantage in gameplay."
+    )
+
+    add_game(
+        "Ys X: Nordics (PS5, PS4, Switch, PC)",
+        "Ys X: Nordics is an action RPG with a focus on combat and exploration in a Nordic-inspired world with rich lore and character development.",
+        "1. Master combat mechanics for effective gameplay. 2. Explore the Nordic world for lore and secrets. 3. Develop characters to enhance their abilities.",
+        "1. The combat mechanics might be complex for some players. 2. Performance issues on older systems. 3. The Nordic-inspired world may be overwhelming.",
+        "1. Practice combat techniques to improve performance. 2. Explore the world thoroughly for lore and secrets. 3. Develop characters to enhance their abilities and skills."
+    )
+
+    add_game(
+        "Life is Strange: Double Exposure (PS5, Xbox Series X|S, PC)",
+        "Life is Strange: Double Exposure is an adventure game focusing on narrative choices and character development with a deep and engaging story.",
+        "1. Make thoughtful choices to shape the narrative. 2. Engage with character development for a richer experience. 3. Explore the story for a deeper understanding.",
+        "1. The narrative focus might not appeal to everyone. 2. Performance issues on older systems. 3. The deep story might be complex for some players.",
+        "1. Make thoughtful choices to influence the narrative. 2. Engage with character development to fully appreciate the story. 3. Explore the story thoroughly for a richer experience."
+    )
+
+    add_game(
+        "Monster High: Skulltimate Secrets (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Monster High: Skulltimate Secrets is a life simulation game set in the Monster High universe, focusing on character interactions and activities.",
+        "1. Engage with character interactions for a fun experience. 2. Explore the Monster High universe for secrets and surprises. 3. Participate in various activities for added entertainment.",
+        "1. The life simulation aspects might be repetitive. 2. Performance issues on older systems. 3. The focus on character interactions might not appeal to everyone.",
+        "1. Engage with character interactions for a fun and immersive experience. 2. Explore the Monster High universe for hidden content. 3. Participate in various activities for added enjoyment."
+    )
+
+    add_game(
+        "Post Trauma (PS5, Xbox Series X|S, PC)",
+        "Post Trauma is a horror game featuring survival elements and a focus on a gripping narrative with intense and suspenseful gameplay.",
+        "1. Use survival tactics to manage resources and threats. 2. Engage with the gripping narrative for a deeper experience. 3. Explore environments for additional content.",
+        "1. The horror elements may be intense for some players. 2. Performance issues on older systems. 3. Survival mechanics might be challenging.",
+        "1. Use survival tactics effectively to manage resources and threats. 2. Engage with the narrative to fully appreciate the story. 3. Explore environments thoroughly for additional content."
+    )
+
+    add_game(
+        "Shadows of the Damned: Hell Remastered (PS5, PS4, Xbox Series X|S, Xbox One, Switch, PC)",
+        "Shadows of the Damned: Hell Remastered is a remastered version of the action-horror game featuring intense combat and a dark, gripping story.",
+        "1. Master combat mechanics for effective gameplay. 2. Explore dark environments for secrets and hidden content. 3. Engage with the story for a deeper understanding.",
+        "1. The dark themes might not appeal to everyone. 2. Performance issues on older systems. 3. The intense combat might be challenging.",
+        "1. Practice combat techniques to improve performance. 2. Explore environments thoroughly for hidden secrets. 3. Engage with the story to fully appreciate the game."
+    )
+    add_game(
+        "Last Spartan: Glory Over Madness",
+        "Last Spartan: Glory Over Madness is a PC action-adventure game that combines intense combat with a gripping narrative. Players take on the role of a Spartan warrior fighting against overwhelming odds in a dystopian future.",
+        "1. Engage in fast-paced combat with a variety of weapons and abilities. 2. Explore a richly detailed dystopian world with a deep narrative. 3. Upgrade your Spartan and unlock new skills to enhance your gameplay.",
+        "1. The game’s fast-paced combat may be challenging for some players. 2. The dystopian setting and themes may not appeal to everyone. 3. Some players may find the narrative complex or hard to follow.",
+        "1. Master the combat mechanics to overcome challenging enemies. 2. Explore the world thoroughly to uncover hidden secrets and upgrades. 3. Pay attention to the story to fully understand the game’s narrative."
+    )
+
+    add_game(
+        "Mario & Luigi: Brothership",
+        "Mario & Luigi: Brothership is a Switch RPG that continues the adventures of Mario and Luigi in a new story. The game features turn-based combat, cooperative gameplay, and a variety of unique abilities for each character.",
+        "1. Team up with Luigi as Mario to explore new areas and complete quests. 2. Use unique character abilities to solve puzzles and defeat enemies. 3. Experience a charming story with plenty of humor and character interactions.",
+        "1. The turn-based combat may feel slow-paced to some players. 2. The game’s humor and style may not appeal to everyone. 3. Some players may find the cooperative mechanics challenging.",
+        "1. Use character abilities strategically to overcome challenges and puzzles. 2. Explore the world to find hidden items and secrets. 3. Enjoy the game’s story and interactions for a richer experience."
+    )
+
+    add_game(
+        "Mindlock - The Apartment",
+        "Mindlock - The Apartment is a puzzle adventure game available on iOS and Android. The game challenges players with intricate puzzles and a mysterious storyline set within an apartment building.",
+        "1. Solve complex puzzles to progress through the game. 2. Uncover the story hidden within the apartment’s walls. 3. Explore different rooms and interact with objects to find clues.",
+        "1. The puzzle difficulty may be challenging for some players. 2. The game’s storyline may be mysterious and require careful attention. 3. Mobile controls may affect gameplay experience.",
+        "1. Pay close attention to clues and details to solve puzzles. 2. Explore thoroughly to uncover all aspects of the story. 3. Take breaks if puzzles become too challenging to avoid frustration."
+    )
+
+    add_game(
+        "Slitterhead",
+        "Slitterhead is a horror action game for PS5, PS4, Xbox Series X|S, and PC. The game combines intense combat with psychological horror elements, offering a chilling experience through its dark and atmospheric world.",
+        "1. Navigate through a terrifying environment filled with horror elements. 2. Utilize a variety of weapons and abilities to fend off threats. 3. Uncover the dark narrative as you progress through the game.",
+        "1. The horror elements may be intense and unsettling for some players. 2. The game’s dark themes may not be suitable for everyone. 3. Some players may find the combat mechanics challenging.",
+        "1. Use weapons and abilities strategically to survive encounters. 2. Pay attention to the narrative for a deeper understanding of the story. 3. Explore the environment to find hidden items and secrets."
+    )
+
+    add_game(
+        "Antonblast",
+        "Antonblast is a retro-inspired platformer available on Switch and PC. The game features fast-paced action, colorful graphics, and challenging levels that pay homage to classic platformers.",
+        "1. Navigate through vibrant levels filled with obstacles and enemies. 2. Utilize various power-ups and abilities to overcome challenges. 3. Collect items and complete levels to progress through the game.",
+        "1. The retro style may not appeal to all players. 2. The game’s difficulty may be challenging for some. 3. Some players may find the fast-paced action overwhelming.",
+        "1. Master the game’s controls to navigate through levels efficiently. 2. Explore each level thoroughly to find hidden secrets and collectibles. 3. Practice to improve your skills and overcome challenging sections."
+    )
+
+    add_game(
+        "Farming Simulator 25",
+        "Farming Simulator 25 is a simulation game for PS5, Xbox Series X|S, and PC that allows players to manage their own farm. The game features realistic farming mechanics, a variety of crops and animals, and a detailed farming environment.",
+        "1. Manage your farm by planting and harvesting crops. 2. Take care of animals and maintain farm equipment. 3. Explore a detailed farming environment with realistic mechanics.",
+        "1. The game’s simulation elements may be complex for new players. 2. The pace of the game may be slow compared to other genres. 3. Some players may find the farming mechanics repetitive.",
+        "1. Learn the game’s mechanics to efficiently manage your farm. 2. Explore different farming strategies to optimize your operation. 3. Enjoy the detailed environment and realistic simulation for a fulfilling experience."
+    )
+
+    add_game(
+        "Skydance's Behemoth",
+        "Skydance's Behemoth is a VR game for PSVR 2, PC VR, and Quest that offers a thrilling experience in a massive world. Players battle enormous creatures and explore a richly detailed environment using virtual reality.",
+        "1. Engage in epic battles against giant creatures using VR mechanics. 2. Explore a vast and immersive world with detailed environments. 3. Use VR controls to interact with the world and enemies.",
+        "1. The VR experience may require adjustment for some players. 2. The game’s combat and mechanics may be challenging in virtual reality. 3. The large world and intense battles may be overwhelming for some players.",
+        "1. Take your time to get used to the VR controls and mechanics. 2. Explore the environment to find hidden secrets and items. 3. Use the VR experience to fully immerse yourself in the game’s world."
+    )
+
+    add_game(
+        "Assassin's Creed Shadows",
+        "Assassin's Creed Shadows is the latest entry in the Assassin's Creed series for PS5, Xbox Series X|S, and PC. The game features a new setting, enhanced stealth mechanics, and an engaging narrative.",
+        "1. Utilize stealth and combat skills to complete missions. 2. Explore a new and detailed world with historical elements. 3. Follow the storyline to uncover hidden secrets and complete objectives.",
+        "1. The game’s stealth mechanics may be challenging for some players. 2. The narrative may be complex and require attention to detail. 3. Some players may find the game’s historical setting less engaging.",
+        "1. Master the stealth mechanics to approach missions effectively. 2. Explore the world to uncover hidden secrets and collectibles. 3. Engage with the storyline to fully experience the game’s narrative."
+    )
+
+    add_game(
+        "Microsoft Flight Simulator 2024",
+        "Microsoft Flight Simulator 2024 is the latest installment in the acclaimed flight simulation series, offering realistic flying experiences and a detailed world to explore. The game features updated graphics and enhanced simulation features.",
+        "1. Experience realistic flight dynamics and controls. 2. Explore a detailed and expansive world with accurate landscapes. 3. Use various aircraft and tools to simulate different flying scenarios.",
+        "1. The simulation complexity may be overwhelming for beginners. 2. High-performance hardware is recommended for optimal experience. 3. Some players may find the flight controls challenging to master.",
+        "1. Take advantage of tutorials and guides to learn flight mechanics. 2. Explore different aircraft and scenarios to enhance your experience. 3. Use high-quality hardware for the best visual and performance results."
+    )
+
+    add_game(
+        "Genshin Impact",
+        "Genshin Impact is an action RPG for Xbox Series X|S and Xbox One, featuring an open world with gacha-based character acquisition. The game offers a vibrant world, fast-paced combat, and a variety of characters to collect and upgrade.",
+        "1. Explore an expansive open world with diverse environments. 2. Collect and upgrade characters with unique abilities. 3. Engage in real-time combat and complete various quests and events.",
+        "1. The gacha system may involve microtransactions. 2. The game’s open world can be vast and overwhelming. 3. Some players may find the combat mechanics complex.",
+        "1. Experiment with different character combinations to find your preferred playstyle. 2. Explore the world to uncover hidden secrets and events. 3. Take advantage of character upgrades and abilities to improve your combat effectiveness."
+    )
+
+    add_game(
+        "Stalker 2: Heart of Chornobyl",
+        "Stalker 2: Heart of Chornobyl is a first-person shooter set in a post-apocalyptic environment with survival horror elements. The game features a detailed open world, dynamic weather, and intense combat mechanics.",
+        "1. Navigate a dangerous and detailed open world with dynamic weather. 2. Engage in intense combat and survival challenges. 3. Explore the environment to uncover the story and hidden secrets.",
+        "1. The game’s atmosphere may be intense and unsettling. 2. Survival mechanics may be challenging for some players. 3. The open world can be vast and require careful exploration.",
+        "1. Utilize environmental elements and strategies to survive. 2. Explore thoroughly to find hidden items and story elements. 3. Pay attention to the dynamic weather and its effects on gameplay."
+    )
+    add_game(
+        "Indiana Jones And The Great Circle",
+        "Indiana Jones And The Great Circle is an adventure game for Xbox Series X|S and PC that follows the iconic archaeologist on a new quest. The game combines exploration, puzzle-solving, and action elements in a richly detailed world.",
+        "1. Explore various locations inspired by real-world archaeology and history. 2. Solve intricate puzzles and uncover hidden secrets. 3. Engage in action-packed sequences with challenging enemies.",
+        "1. The game's complexity may be overwhelming for some players. 2. The narrative might involve intricate historical elements that require attention. 3. Action sequences may be intense and challenging.",
+        "1. Take time to explore each location to uncover all secrets. 2. Use clues and items wisely to solve puzzles. 3. Enjoy the action sequences and cinematic moments for a full adventure experience."
+    )
+
+    add_game(
+        "Monument Valley 3",
+        "Monument Valley 3 is the latest installment in the critically acclaimed puzzle series available on Netflix. The game features innovative level designs, beautiful art, and engaging puzzles that challenge players' spatial reasoning.",
+        "1. Solve visually stunning puzzles that play with perspective and geometry. 2. Explore new environments and discover unique mechanics. 3. Enjoy the game’s art and music that enhance the overall experience.",
+        "1. The puzzles may be challenging and require creative thinking. 2. The game’s abstract art style may not appeal to everyone. 3. Some levels may be more complex than previous entries.",
+        "1. Experiment with different approaches to solve puzzles. 2. Enjoy the game’s artistic design and atmospheric soundtrack. 3. Take your time with each puzzle to fully appreciate the experience."
+    )
+
+    add_game(
+        "Alien: Rogue Incursion",
+        "Alien: Rogue Incursion is a VR horror game available on PSVR 2, PC VR, and Quest 3. The game offers an immersive experience where players must survive encounters with extraterrestrial threats in a dark and eerie environment.",
+        "1. Navigate a tense and immersive environment while dealing with alien threats. 2. Use VR controls to interact with objects and survive. 3. Explore and uncover the story behind the alien incursion.",
+        "1. The game’s horror elements may be intense and unsettling. 2. VR controls and movement may require adjustment. 3. The dark atmosphere and gameplay may be overwhelming for some players.",
+        "1. Take your time to get used to VR controls and mechanics. 2. Use environmental cues to survive and avoid alien threats. 3. Pay close attention to the storyline and clues for a deeper understanding of the game."
+    )
+    add_game(
+        "9th Dawn Remake - PC",
+        "9th Dawn Remake is a classic RPG reimagined with updated graphics and gameplay, offering a rich fantasy world to explore.",
+        "1. Master the updated combat and magic systems. 2. Explore the expansive world to uncover hidden secrets. 3. Engage in quests for deeper immersion.",
+        "1. Some bugs from the original might persist. 2. The vast world can be overwhelming. 3. May not appeal to players preferring modern gameplay styles.",
+        "1. Use patches and updates to fix bugs. 2. Take time to explore and enjoy the world at your own pace. 3. Adapt to the classic gameplay for a nostalgic experience."
+    )
+
+    add_game(
+        "Acolyte of the Altar - PC",
+        "Acolyte of the Altar is a strategy game focused on religious and political maneuvering in a medieval setting.",
+        "1. Develop your strategy to balance power and faith. 2. Forge alliances to strengthen your position. 3. Manage resources wisely to maintain influence.",
+        "1. Complex strategy might be difficult for newcomers. 2. Can be slow-paced. 3. Requires careful planning and management.",
+        "1. Start with tutorials to understand mechanics. 2. Be patient with the pacing and plan ahead. 3. Focus on resource management to build your influence."
+    )
+
+    add_game(
+        "A Deep Slumber - Xbox Series X|S, Xbox One, PC",
+        "A Deep Slumber is a psychological horror game that delves into the mind’s darkest fears.",
+        "1. Solve intricate puzzles to progress. 2. Pay attention to the story for a full experience. 3. Explore thoroughly to uncover all aspects of the narrative.",
+        "1. The horror elements might be too intense for some. 2. Puzzles can be challenging. 3. The narrative might be complex.",
+        "1. Take breaks if the horror becomes overwhelming. 2. Use hints if stuck on puzzles. 3. Engage deeply with the story for a complete experience."
+    )
+
+    add_game(
+        "Aero GPX - PC",
+        "Aero GPX is a high-speed racing game with futuristic vehicles and tracks.",
+        "1. Master the controls for optimal racing performance. 2. Learn the tracks to gain an edge over opponents. 3. Customize your vehicle for better results.",
+        "1. High difficulty curve for new players. 2. The fast pace may cause motion sickness. 3. Limited vehicle customization options.",
+        "1. Practice on tracks to improve performance. 2. Adjust settings to minimize motion sickness. 3. Explore vehicle upgrades for better results."
+    )
+
+    add_game(
+        "Age of Empires Mobile - Mobile",
+        "Age of Empires Mobile brings the classic RTS experience to mobile devices with updated graphics and touch controls.",
+        "1. Learn touch controls for efficient gameplay. 2. Build and manage your empire strategically. 3. Engage in multiplayer for a competitive experience.",
+        "1. Touch controls may be less precise. 2. Limited content compared to PC versions. 3. Performance can vary on different mobile devices.",
+        "1. Practice with controls to improve accuracy. 2. Explore all features for a complete experience. 3. Ensure your device meets performance requirements."
+    )
+
+    add_game(
+        "Ages of Cataria - Switch, PC",
+        "Ages of Cataria is a whimsical adventure game set in a magical world with charming characters and quests.",
+        "1. Engage with the world’s lore for a richer experience. 2. Complete quests to progress the story. 3. Interact with NPCs for side activities.",
+        "1. May be too simplistic for hardcore gamers. 2. Some repetitive quests. 3. Limited challenge for experienced players.",
+        "1. Enjoy the game’s charm and storytelling. 2. Focus on completing quests for full progression. 3. Explore interactions for added content."
+    )
+
+    add_game(
+        "Airland World - PC",
+        "Airland World is a simulation game where players manage a floating island and its resources.",
+        "1. Balance resource management with island expansion. 2. Explore different island features to optimize your setup. 3. Engage with other players in online modes.",
+        "1. Can be slow-paced. 2. Resource management can be challenging. 3. Limited interaction compared to other simulation games.",
+        "1. Take your time to manage resources effectively. 2. Explore online features for additional engagement. 3. Use guides if struggling with management."
+    )
+
+    add_game(
+        "Airship Lost: Flotilla - PC",
+        "Airship Lost: Flotilla is an adventure game where players explore a floating city in a steampunk world.",
+        "1. Navigate the airship and city for exploration. 2. Engage with the story and characters. 3. Solve puzzles to unlock new areas.",
+        "1. The steampunk setting may not appeal to everyone. 2. Puzzles can be challenging. 3. Some players may find the pacing slow.",
+        "1. Familiarize yourself with the controls for better navigation. 2. Engage with the story for deeper immersion. 3. Use hints if puzzles become difficult."
+    )
+
+    add_game(
+        "Albatroz - PC, Consoles",
+        "Albatroz is a platformer with vibrant visuals and challenging levels.",
+        "1. Master platforming mechanics for success. 2. Explore each level to find collectibles. 3. Practice timing and precision to overcome obstacles.",
+        "1. High difficulty might frustrate some players. 2. Limited content in early levels. 3. Performance may vary across different systems.",
+        "1. Practice levels to improve timing and precision. 2. Collectibles can provide extra challenges. 3. Adjust settings for optimal performance."
+    )
+
+    add_game(
+        "Ale Abbey - PC",
+        "Ale Abbey is a management simulation game where players run a medieval tavern.",
+        "1. Manage resources and staff efficiently. 2. Upgrade the tavern to attract more customers. 3. Complete quests for additional rewards.",
+        "1. May become repetitive over time. 2. Balancing resources can be challenging. 3. Limited content in early access.",
+        "1. Explore different management strategies. 2. Take time to upgrade and expand. 3. Engage with community updates for new content."
+    )
+
+    add_game(
+        "All In Abyss: Judge The Fake - PC",
+        "All In Abyss: Judge The Fake is a detective game with a focus on solving mysteries in a dark and immersive setting.",
+        "1. Investigate clues thoroughly. 2. Engage with the narrative for a deeper understanding. 3. Use deduction skills to solve cases.",
+        "1. The dark theme may not appeal to everyone. 2. Puzzles can be complex. 3. The pacing might be slow for some players.",
+        "1. Take your time with investigations. 2. Engage deeply with the narrative. 3. Use hints if you get stuck on puzzles."
+    )
+
+    add_game(
+        "All You Need Is Help - PC, Xbox Series X|S, Xbox One, Switch, PS5",
+        "All You Need Is Help is a cooperative puzzle game that requires teamwork to solve challenges.",
+        "1. Communicate effectively with teammates. 2. Collaborate to solve puzzles. 3. Explore different strategies for better results.",
+        "1. Requires a cooperative approach. 2. Some puzzles might be too challenging for solo play. 3. Limited single-player content.",
+        "1. Play with friends to fully enjoy the experience. 2. Experiment with different strategies. 3. Use hints if necessary."
+    )
+
+    add_game(
+        "Alruna and the Necro-Industrialists - PC",
+        "Alruna and the Necro-Industrialists is an RPG set in a world of necromancy and industrial revolution.",
+        "1. Master the unique combat and magic systems. 2. Explore the industrial and necromantic world for secrets. 3. Engage with the story for a richer experience.",
+        "1. The setting may be niche for some players. 2. Combat can be complex. 3. Performance may vary on lower-end systems.",
+        "1. Take time to learn combat mechanics. 2. Explore thoroughly to uncover hidden elements. 3. Adjust settings for better performance."
+    )
+
+    add_game(
+        "Angeline Era - PC",
+        "Angeline Era is a narrative-driven adventure game set in a fantastical world.",
+        "1. Engage deeply with the story and characters. 2. Explore different locations for a full experience. 3. Complete quests to progress the narrative.",
+        "1. The focus on narrative might not appeal to action-oriented players. 2. Limited gameplay mechanics. 3. Some pacing issues.",
+        "1. Immerse yourself in the story for a fulfilling experience. 2. Explore thoroughly to enjoy the world. 3. Be patient with pacing for a complete experience."
+    )
+
+    add_game(
+        "Anger Foot - PC",
+        "Anger Foot is a high-intensity action game featuring fast-paced combat and dynamic environments.",
+        "1. Master the fast-paced combat mechanics. 2. Learn the layouts of levels for better performance. 3. Utilize the environment to your advantage.",
+        "1. The high pace might be overwhelming. 2. Limited storyline depth. 3. Some may find the combat repetitive.",
+        "1. Practice to improve combat skills. 2. Familiarize yourself with level layouts. 3. Enjoy the fast-paced action for a thrilling experience."
+    )
+
+    add_game(
+        "Ara: History Untold - PC",
+        "Ara: History Untold is a historical strategy game that allows players to shape the course of history.",
+        "1. Develop strategic plans to alter historical events. 2. Manage resources and alliances effectively. 3. Explore different historical scenarios for varied gameplay.",
+        "1. Can be complex and overwhelming for new players. 2. Requires a significant time investment. 3. Limited interaction compared to other strategy games.",
+        "1. Start with tutorials to learn mechanics. 2. Plan strategies carefully for success. 3. Explore historical scenarios for a varied experience."
+    )
+
+    add_game(
+        "Aragami 2 - PC, Xbox Series X|S, Xbox One, PS5",
+        "Aragami 2 is a stealth action game where players control a shadow warrior in a dark and mystical world.",
+        "1. Master stealth mechanics for successful missions. 2. Use shadows to your advantage. 3. Engage in combat only when necessary.",
+        "1. Stealth mechanics might be difficult for some players. 2. Limited direct combat options. 3. Performance can vary on different systems.",
+        "1. Practice stealth techniques to improve. 2. Use shadows effectively to avoid detection. 3. Engage with the story for deeper immersion."
+    )
+
+    add_game(
+        "Arcadian Cross - PC",
+        "Arcadian Cross is a fantasy RPG with an emphasis on character development and exploration.",
+        "1. Customize your character for a unique playstyle. 2. Explore the world to uncover lore and secrets. 3. Engage in quests to progress the story.",
+        "1. Character development might be overwhelming. 2. Exploration can be time-consuming. 3. Some quests might feel repetitive.",
+        "1. Take time to develop your character. 2. Explore the world to fully appreciate the lore. 3. Enjoy the quests and story for a complete experience."
+    )
+
+    add_game(
+        "Arise: A Simple Story - Switch, PC, PS4",
+        "Arise: A Simple Story is an emotional platformer that explores themes of life and loss through unique gameplay mechanics.",
+        "1. Experience the story through innovative platforming. 2. Use time manipulation mechanics to solve puzzles. 3. Engage with the emotional narrative.",
+        "1. The emotional themes may be intense for some players. 2. Limited gameplay variety. 3. Some puzzles might be challenging.",
+        "1. Embrace the emotional narrative for a deeper experience. 2. Use time manipulation mechanics creatively. 3. Enjoy the unique platforming for a memorable experience."
+    )
+
+    add_game(
+        "Arithmetica - PC",
+        "Arithmetica is a puzzle game that challenges players with mathematical and logical problems.",
+        "1. Solve puzzles to progress through levels. 2. Utilize mathematical skills for better results. 3. Explore different puzzle types for variety.",
+        "1. May not appeal to those not interested in math. 2. Puzzles can be difficult. 3. Limited narrative elements.",
+        "1. Practice mathematical skills to improve. 2. Explore various puzzle types for variety. 3. Engage with the puzzles for a challenging experience."
+    )
+
+    add_game(
+        "Ark of the Covenant - PC, Switch",
+        "Ark of the Covenant is an action-adventure game with biblical themes and mythological elements.",
+        "1. Engage in combat and exploration with biblical references. 2. Solve puzzles related to ancient myths. 3. Explore the world for hidden secrets.",
+        "1. The biblical themes may not appeal to everyone. 2. Combat and puzzles can be challenging. 3. Limited variety in gameplay.",
+        "1. Embrace the biblical themes for a unique experience. 2. Use guides if struggling with puzzles. 3. Explore thoroughly to uncover secrets."
+    )
+
+    add_game(
+        "Armored Valor - PC",
+        "Armored Valor is a tactical shooter featuring mech combat and strategic gameplay.",
+        "1. Master mech controls for effective combat. 2. Plan strategies for tactical advantage. 3. Engage in multiplayer for competitive play.",
+        "1. Complex controls may be difficult for new players. 2. Tactical gameplay can be slow-paced. 3. Limited single-player content.",
+        "1. Practice mech controls to improve performance. 2. Plan strategies carefully for better results. 3. Play multiplayer to engage with the community."
+    )
+
+    add_game(
+        "Artful Spirit - PC, Switch",
+        "Artful Spirit is a narrative-driven adventure game with a focus on art and personal expression.",
+        "1. Explore the world and interact with characters. 2. Engage with the artistic elements for a unique experience. 3. Complete quests for personal growth.",
+        "1. The focus on art may not appeal to all players. 2. Limited action elements. 3. The narrative may be slow-paced.",
+        "1. Enjoy the artistic elements for a unique experience. 2. Engage with the narrative for personal growth. 3. Explore thoroughly to fully appreciate the world."
+    )
+
+    add_game(
+        "Atonement: Scourge of Time - PC, PS5, Xbox Series X|S",
+        "Atonement: Scourge of Time is an action RPG set in a dark fantasy world where players battle against supernatural forces.",
+        "1. Master combat and magic systems for success. 2. Explore the dark fantasy world for hidden lore. 3. Engage with the story for deeper immersion.",
+        "1. The dark fantasy setting may not appeal to everyone. 2. Combat can be challenging. 3. Some players might find the pacing slow.",
+        "1. Practice combat and magic systems to improve performance. 2. Explore thoroughly for hidden lore. 3. Engage with the story for a richer experience."
+    )
+
+    add_game(
+        "Ava: Origins - PC",
+        "Ava: Origins is a sci-fi RPG where players explore alien worlds and uncover ancient mysteries.",
+        "1. Master the sci-fi combat and exploration mechanics. 2. Engage with the narrative to understand the origins. 3. Explore different alien worlds for a full experience.",
+        "1. The sci-fi setting may not appeal to everyone. 2. Combat and exploration can be complex. 3. Performance may vary on different systems.",
+        "1. Familiarize yourself with sci-fi mechanics for better gameplay. 2. Engage with the narrative for deeper understanding. 3. Explore different worlds for a complete experience."
+    )
+
+    add_game(
+        "Avenue: City of Secrets - PC",
+        "Avenue: City of Secrets is an urban adventure game set in a sprawling city full of mysteries and intrigue.",
+        "1. Navigate the city to uncover secrets. 2. Engage with characters for deeper storylines. 3. Solve puzzles to progress through the narrative.",
+        "1. The urban setting might be overwhelming. 2. Some puzzles can be difficult. 3. Limited gameplay variety.",
+        "1. Take your time exploring the city. 2. Engage with characters for additional content. 3. Use hints if stuck on puzzles."
+    )
+
+    add_game(
+        "Axion Reborn - PC, Xbox Series X|S, PS5",
+        "Axion Reborn is a sci-fi action RPG set in a futuristic world with advanced technology and alien threats.",
+        "1. Master futuristic combat and technology. 2. Explore the world to uncover hidden elements. 3. Engage with the narrative for a full experience.",
+        "1. Complex technology mechanics may be difficult for some players. 2. The futuristic setting might not appeal to everyone. 3. Combat can be intense.",
+        "1. Practice combat to improve skills. 2. Explore thoroughly for hidden elements. 3. Engage with the narrative for a complete experience."
+    )
+
+    add_game(
+        "Axiom Prime - PC",
+        "Axiom Prime is a sci-fi strategy game with a focus on resource management and interstellar exploration.",
+        "1. Manage resources effectively for success. 2. Explore interstellar environments for strategic advantage. 3. Plan strategies to navigate complex challenges.",
+        "1. The focus on resource management may be challenging. 2. Interstellar exploration can be complex. 3. Limited content in early access.",
+        "1. Develop effective resource management strategies. 2. Explore different environments for advantage. 3. Plan strategies carefully for success."
+    )
+
+root = tk.Tk()
+root.title("Game Info Tool")
+
+tk.Label(root, text="Enter Game Name:").pack(pady=10)
+entry = tk.Entry(root)
+entry.pack(pady=5)
+
+search_button = tk.Button(root, text="Search", command=search_game)
+search_button.pack(pady=10)
+
+result_label = tk.Label(root, text="", justify="left")
+result_label.pack(pady=10)
+
+root.mainloop()
