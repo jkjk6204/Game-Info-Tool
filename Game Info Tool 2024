@@ -1,0 +1,515 @@
+import tkinter as tk
+from tkinter import messagebox
+import sqlite3
+import pyttsx3
+
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+
+# Database setup
+# noinspection PyGlobalUndefined
+def create_games_table():
+    global conn
+    try:
+        conn = sqlite3.connect('games.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS games (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            description TEXT,
+            tips TEXT,
+            glitches TEXT,
+            guide TEXT
+        )
+        ''')
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred while creating the table: {e}")
+    finally:
+        conn.close()
+
+
+# noinspection PyGlobalUndefined
+def add_game(name, description, tips, glitches, guide):
+    global conn
+    try:
+        conn = sqlite3.connect('games.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+        INSERT INTO games (name, description, tips, glitches, guide)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (name, description, tips, glitches, guide))
+        conn.commit()
+        print(f"Game '{name}' added successfully.")
+    except sqlite3.IntegrityError as e:
+        print(f"Error: Could not add game '{name}'. It may already exist. {e}")
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+
+# noinspection PyGlobalUndefined
+def fetch_game_data(game_name):
+    global conn
+    try:
+        conn = sqlite3.connect('games.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM games WHERE name = ?', (game_name,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "name": row[1],
+                "description": row[2],
+                "tips": row[3],
+                "glitches": row[4],
+                "guide": row[5]
+            }
+        else:
+            return None
+    except sqlite3.Error as e:
+        print(f"An error occurred while fetching the data: {e}")
+        return None
+    finally:
+        conn.close()
+
+# GUI setup
+def search_game():
+    game_name = entry.get()
+    if not game_name:
+        messagebox.showwarning("Input Error", "Please enter a game name.")
+        return
+
+    game_data = fetch_game_data(game_name)
+
+    if game_data:
+        display_game_info(game_data)
+    else:
+        result_label.config(text="Game not found. Please try again later.")
+        speak_text("Game not found. Please try again later.")
+
+def display_game_info(game_data):
+    if not game_data:
+        result_label.config(text="Game not found.")
+        speak_text("Game not found.")
+        return
+
+    info_text = f"Name: {game_data['name']}\n"
+    info_text += f"Description: {game_data['description']}\n"
+    info_text += f"Tips and Tricks:\n{game_data['tips']}\n"
+    info_text += f"Glitch Spots:\n{game_data['glitches']}\n"
+    info_text += f"Guide:\n{game_data['guide']}\n"
+
+    result_label.config(text=info_text)
+    speak_text(info_text)
+
+def speak_text(text):
+    engine.say(text)
+    engine.runAndWait()
+
+# Main execution
+if __name__ == '__main__':
+    create_games_table()
+
+    # Example game data - Uncomment to add game to database
+    add_game(
+        "Minecraft",
+        "A sandbox video game developed by Mojang Studios. In Minecraft, players explore a blocky, procedurally generated 3D world with infinite terrain, discovering and extracting raw materials, crafting tools and items, and building structures or earthworks.",
+        "1. Always carry a pickaxe and a sword. 2. Build a shelter before nightfall. 3. Use a bed to skip the night.",
+        "1. Duplication glitch in creative mode. 2. Blocks floating in the air. 3. Occasionally, entities might get stuck.",
+        "1. Start by gathering basic resources like wood and stone. 2. Craft essential tools and build a shelter. 3. Explore caves for valuable resources like coal and iron. 4. Build and enchant weapons and armor to protect yourself from hostile mobs."
+    )
+
+    add_game(
+        "Fortnite",
+        "A battle royal game developed by Epic Games. In Fortnite, 100 players are dropped onto an island and compete to be the last person or team standing. Players can gather resources, build structures, and fight other players.",
+        "1. Always gather resources to build cover. 2. Aim for high ground to spot enemies. 3. Use headphones to hear footsteps.",
+        "1. Building glitches causing structures to appear in the wrong place. 2. Weapon and item synchronization. 3. Occasionally, players may fall through the map.",
+        "1. Drop in a less crowded area to loot safely. 2. Collect materials and build defenses as you encounter enemies. 3. Keep an eye on the shrinking play zone and move towards the safe area."
+    )
+
+    add_game(
+        "Among Us",
+        "A multiplayer social deduction game developed by InnerSloth. In Among Us, players work together to complete tasks on a spaceship while impostors try to eliminate the crew without being detected.",
+        "1. Complete tasks quickly and efficiently. 2. Pay attention to other players' behavior. 3. Use the emergency meetings wisely.",
+        "1. Players can get stuck in the map due to glitches. 2. Occasionally, the taskbar may not update correctly. 3. Impostors can use glitches to hide their actions.",
+        "1. Stick with a group to avoid being alone. 2. Report suspicious behavior and attend meetings. 3. Use visual tasks to prove your innocence."
+    )
+    add_game(
+        "Skyrim",
+        "The Elder Scrolls V: Skyrim is an open-world action role-playing game developed by Bethesda Game Studios. Players assume the role of the Dragon born, a hero with the ability to speak the dragon language and fight against dragons in a fantasy world.",
+        "1. Invest in smiting and enchanting to improve your gear. 2. Use shouts strategically in combat. 3. Explore dungeons and complete quests to gain experience and loot.",
+        "1. Sometimes, quests may not trigger properly due to bugs. 2. NPCs might get stuck or behave strangely. 3. Certain mods may cause conflicts.",
+        "1. Follow the main quest line to learn about the Dragon born prophecy. 2. Join guilds and factions to unlock special abilities and quests. 3. Explore the world to find hidden treasures and side quests."
+    )
+
+    add_game(
+        "Grand Theft Auto III",
+        "Grand Theft Auto III is an open-world action-adventure game developed by DMA Design (later known as Rockstar North). Set in Liberty City, players control the silent protagonist Claude as he rises through the criminal underworld.",
+        "1. Explore the city to find hidden items. 2. Upgrade weapons and vehicles to improve performance. 3. Pay attention to in-game radio stations for tips and clues.",
+        "1. Occasional vehicle physics glitches. 2. Some missions may have bugs causing progress issues. 3. Characters or objects may get stuck in certain areas.",
+        "1. Complete missions to progress through the story. 2. Use the map to locate key locations and missions. 3. Engage in side activities for additional rewards."
+    )
+
+    add_game(
+        "Grand Theft Auto Vice City",
+        "Grand Theft Auto: Vice City is an open-world action-adventure game developed by Rockstar North. Set in the 1980s in Vice City, players control Tommy Perceptive as he builds his criminal empire and takes over the city.",
+        "1. Invest in properties for additional income. 2. Use the map to navigate and find mission locations. 3. Complete side missions to unlock special vehicles and weapons.",
+        "1. Some missions may have timing issues or bugs. 2. Vehicles may occasionally behave erratically. 3. NPCs can sometimes get stuck or act unpredictably.",
+        "1. Follow the main storyline to gain control of the city. 2. Purchase properties to expand your criminal empire. 3. Explore the city to discover hidden secrets and collectibles."
+    )
+
+    add_game(
+        "Grand Theft Auto San Andreas",
+        "Grand Theft Auto: San Andreas is an open-world action-adventure game developed by Rockstar North. Set in the fictional state of San Andreas, players control CJ as he returns to his hometown and seeks to restore his family's former glory.",
+        "1. Customize vehicles and characters for better performance. 2. Use the map and GPS for navigation. 3. Engage in side activities like gym workouts and gang wars for extra benefits.",
+        "1. Some missions may have bugs causing issues with objectives. 2. Vehicles can sometimes glitch, especially during high-speed chases. 3. NPCs might exhibit erratic behavior or get stuck.",
+        "1. Complete the main missions to advance the story. 2. Take part in side missions and activities to improve your skills and unlock new features. 3. Explore different regions to fully experience the game's content."
+    )
+
+    add_game(
+        "Grand Theft Auto IV",
+        "Grand Theft Auto IV is an open-world action-adventure game developed by Rockstar North. Set in Liberty City, players control Niko Belli, an Eastern European immigrant, as he navigates the criminal underworld and seeks a better life in the city.",
+        "1. Utilize cover and tactical shooting in combat. 2. Manage your character's health and relationships for better results. 3. Explore the city for additional side missions and activities.",
+        "1. Some missions might have issues with triggering events. 2. Vehicles may occasionally have handling issues. 3. NPCs may exhibit occasional pathfinding problems.",
+        "1. Follow the main story missions to progress through the game. 2. Engage in side activities and mini-games for additional rewards. 3. Explore the city to find hidden items and collectibles."
+    )
+
+    add_game(
+        "Grand Theft Auto V",
+        "Grand Theft Auto V is an open-world action-adventure game developed by Rockstar North. Set in the fictional state of San Andreas, players control three protagonists—Michael, Franklin, and Trevor—as they plan and execute heists while navigating their personal lives and criminal endeavors.",
+        "1. Switch between characters strategically for different missions. 2. Use the in-game map and GPS to navigate effectively. 3. Participate in side activities to gain additional income and rewards.",
+        "1. Occasionally, mission objectives may not trigger correctly. 2. Vehicles and NPCs can sometimes exhibit erratic behavior. 3. Online mode may experience connectivity issues or bugs.",
+        "1. Complete the main story missions to progress the narrative. 2. Engage in side missions and heists to earn money and upgrade your characters. 3. Explore the vast open world for hidden treasures and activities."
+    )
+
+    add_game(
+        "Grand Theft Auto VI",
+        "Grand Theft Auto VI is an upcoming open-world action-adventure game developed by Rockstar Games. Set in a new fictional city, the game is expected to offer an expansive open world with new gameplay mechanics and storylines.",
+        "1. Explore the new city to familiarize yourself with key locations. 2. Experiment with new gameplay mechanics and features. 3. Engage in side missions and activities to maximize your experience.",
+        "1. As the game is upcoming, potential bugs and issues may not be fully documented yet. 2. New mechanics may cause unexpected glitches. 3. Keep an eye out for updates and patches.",
+        "1. Follow the main storyline to experience the new narrative. 2. Participate in side activities and missions for additional content. 3. Explore the city to discover new features and hidden elements."
+    )
+    add_game(
+        "Red Dead Revolver",
+        "Red Dead Revolver is a third-person action-adventure game developed by Rockstar San Diego. Set in the American Wild West, players control a bounty hunter seeking revenge and justice.",
+        "1. Use cover effectively in shootouts. 2. Complete side missions to improve your skills. 3. Upgrade weapons and abilities as you progress.",
+        "1. Some missions may have issues with triggering events. 2. Character animations may occasionally glitch. 3. NPCs might get stuck in certain scenarios.",
+        "1. Follow the main storyline to progress through the game. 2. Engage in side activities to gain additional rewards. 3. Explore the open world to uncover hidden secrets and items."
+    )
+
+    add_game(
+        "Red Dead Redemption",
+        "Red Dead Redemption is an open-world action-adventure game developed by Rockstar San Diego. Set in the early 20th century, players control John Marston, a former outlaw searching for his old gang members.",
+        "1. Use the Dead Eye system to slow down time in gunfights. 2. Complete side missions and challenges for extra rewards. 3. Hunt and fish to gather resources.",
+        "1. Occasionally, mission objectives may not trigger correctly. 2. Vehicles and animals can sometimes behave unpredictably. 3. NPCs might exhibit erratic behavior or get stuck.",
+        "1. Follow the main storyline to uncover the fate of John Marston. 2. Participate in side missions and challenges to enhance your experience. 3. Explore the vast open world to discover hidden treasures and secrets."
+    )
+
+    add_game(
+        "Red Dead Redemption 2",
+        "Red Dead Redemption 2 is an open-world action-adventure game developed by Rockstar Games. Set in the late 1800s, players control Arthur Morgan, an outlaw and member of the Van der Linde gang, as they navigate the decline of the Wild West.",
+        "1. Manage your horse's health and stamina for better performance. 2. Engage in various side activities like fishing, hunting, and crafting. 3. Use the game's morality system to make choices that affect the story.",
+        "1. Some missions may have bugs or issues with triggering events. 2. NPCs might exhibit occasional glitches or erratic behavior. 3. The game may experience performance issues on certain hardware configurations.",
+        "1. Follow the main storyline to experience Arthur Morgan's journey. 2. Engage in side activities and missions to gain additional rewards and improve your skills. 3. Explore the detailed open world to uncover hidden secrets and items."
+    )
+    add_game(
+        "Gears of War",
+        "Gears of War is a third-person shooter developed by Epic Games. Set in a post-apocalyptic world, players fight against the Locust Horde to save humanity.",
+        "1. Use cover effectively to avoid enemy fire. 2. Make use of the game's various weapons and gadgets. 3. Coordinate with teammates in multiplayer modes.",
+        "1. Occasionally, enemies may glitch and not respond correctly. 2. Sometimes, weapon pickups may not appear as expected. 3. Certain levels may have issues with triggering events.",
+        "1. Follow the main storyline to progress through the game. 2. Explore different maps and areas to uncover secrets. 3. Utilize various weapons and strategies to defeat enemies."
+    )
+
+    add_game(
+        "Gears of War 2",
+        "Gears of War 2 continues the battle against the Locust Horde, introducing new gameplay mechanics and a deeper story. Players must fight their way through increasingly challenging enemies and environments.",
+        "1. Use the new cover mechanics to your advantage. 2. Experiment with different weapon combinations. 3. Complete side missions to gain extra rewards.",
+        "1. Some levels may have issues with enemy AI. 2. Occasionally, players might experience connectivity issues in multiplayer modes. 3. Certain visual glitches may occur during gameplay.",
+        "1. Progress through the main storyline to uncover more about the Locust threat. 2. Engage in side missions and challenges for additional rewards. 3. Explore the game world to find hidden items and secrets."
+    )
+
+    add_game(
+        "Gears of War 3",
+        "Gears of War 3 wraps up the original trilogy, featuring epic battles and a conclusion to the story of Marcus Fenix and his squad. Players face the final conflict against the Locust Horde and new enemy factions.",
+        "1. Utilize the new weaponry and abilities available in this installment. 2. Coordinate with teammates in the new multiplayer modes. 3. Manage your resources and health carefully during combat.",
+        "1. Some missions may have issues with event triggers. 2. Occasionally, players might experience bugs with enemy behaviors. 3. Certain graphical glitches may be present in specific areas.",
+        "1. Follow the main storyline to reach the game's conclusion. 2. Participate in multiplayer modes to test your skills. 3. Explore the detailed game world to uncover additional content and secrets."
+    )
+
+    add_game(
+        "Gears of War 4",
+        "Gears of War 4 introduces a new generation of soldiers fighting against a new threat known as the Swarm. Set 25 years after the events of the previous games, players control JD Fenix and his team in their battle for survival.",
+        "1. Master the new gameplay mechanics introduced in this installment. 2. Experiment with new weapons and enemy types. 3. Utilize the game's cover system to stay protected in combat.",
+        "1. Some enemies may exhibit unusual behaviors or glitches. 2. Certain missions might have issues with objective triggers. 3. Occasionally, players may experience network issues in multiplayer modes.",
+        "1. Progress through the main storyline to uncover the new threat. 2. Engage in multiplayer modes to test your skills against other players. 3. Explore the game world to find hidden items and lore."
+    )
+
+    add_game(
+        "Gears 5",
+        "Gears 5 continues the saga with Kait Diaz as the protagonist. Players delve into her backstory and face new threats while battling both the Swarm and other enemies in a richly detailed world.",
+        "1. Utilize the new gameplay mechanics and weapons introduced in Gears 5. 2. Explore the game's environments for valuable resources and secrets. 3. Coordinate with teammates in both the campaign and multiplayer modes.",
+        "1. Some gameplay elements may have minor bugs or glitches. 2. Occasionally, players might experience issues with the game's physics or AI. 3. Network issues may affect multiplayer performance.",
+        "1. Follow Kait Diaz's journey through the main storyline. 2. Participate in multiplayer modes and challenges for additional content. 3. Explore the expansive game world to uncover hidden secrets and story elements."
+    )
+
+    add_game(
+        "Gears of War: Judgment",
+        "Gears of War: Judgment is a spin-off set before the events of the original Gears of War, focusing on Kilo Squad's fight against the Locust. It introduces new gameplay elements and a different perspective on the Gears universe.",
+        "1. Use the new gameplay mechanics to your advantage. 2. Explore the game's levels thoroughly to find hidden items. 3. Utilize the game's new features for improved combat strategies.",
+        "1. Some gameplay mechanics might have minor glitches. 2. Occasionally, players may encounter issues with enemy AI. 3. Certain levels may have visual or performance issues.",
+        "1. Follow the storyline to learn more about Kilo Squad's mission. 2. Engage in the game's various modes and challenges. 3. Explore each level to uncover secrets and additional content."
+    )
+    add_game(
+        "Super Mario Bros.",
+        "Super Mario Bros. is a platformer game developed by Nintendo. Players control Mario as he travels through the Mushroom Kingdom to rescue Princess Peach from Browser.",
+        "1. Use power-ups like the Fire Flower and Super Mushroom. 2. Find and use warp zones to skip levels. 3. Practice timing for jumping and running.",
+        "1. Sometimes, hidden blocks may not be apparent. 2. Enemies may have unpredictable behaviors. 3. Occasionally, levels may have design quirks.",
+        "1. Collect coins and power-ups to aid your progress. 2. Learn the layout of each level to anticipate obstacles. 3. Explore each area to find secret exits and power-ups."
+    )
+
+    add_game(
+        "Super Mario 64",
+        "Super Mario 64 is a 3D platformer game developed by Nintendo. Players guide Mario through Princess Peach's castle and various worlds to collect Power Stars and defeat Browser.",
+        "1. Use Mario's jumping abilities to explore each level. 2. Collect Power Stars to unlock new areas. 3. Use the camera controls to better navigate the 3D environments.",
+        "1. Occasionally, camera controls may be difficult to manage. 2. Some stars may be challenging to collect due to game physics. 3. Rarely, level geometry might cause issues.",
+        "1. Explore each world thoroughly to find all Power Stars. 2. Use Mario's abilities to solve puzzles and defeat enemies. 3. Pay attention to visual clues to find hidden stars and secrets."
+    )
+
+    add_game(
+        "Super Mario Galaxy",
+        "Super Mario Galaxy is a 3D platformer game where Mario explores various galaxies to rescue Princess Peach and stop Browser. The game features innovative gravity mechanics and creative level design.",
+        "1. Use gravity shifts to navigate complex levels. 2. Collect Power Stars to unlock new galaxies. 3. Experiment with different power-ups and abilities.",
+        "1. Gravity mechanics can be disorienting. 2. Some levels may have complex navigation challenges. 3. Occasionally, physics glitches may occur.",
+        "1. Master the gravity mechanics to navigate through levels. 2. Collect all Power Stars to access new content. 3. Explore each galaxy to uncover hidden stars and secrets."
+    )
+
+    add_game(
+        "Super Mario Odyssey",
+        "Super Mario Odyssey is a 3D platformer where Mario travels across various kingdoms to rescue Princess Peach from Browser. The game features a new mechanic with Mario's hat, Cappy, which allows for capturing enemies and objects.",
+        "1. Use Cappy to capture enemies and objects for new abilities. 2. Explore each kingdom thoroughly to find Power Moons. 3. Use the map and hints to locate hidden items and secrets.",
+        "1. Capturing enemies may have occasional glitches. 2. Some moons can be challenging to find due to level design. 3. Occasionally, game physics may cause minor issues.",
+        "1. Utilize Cap's abilities to solve puzzles and defeat enemies. 2. Explore every corner of each kingdom to find all Power Moons. 3. Use the map and hints to locate hidden secrets and objectives."
+    )
+
+    add_game(
+        "Mario Kart 8 Deluxe",
+        "Mario Kart 8 Deluxe is a racing game where players compete in go-kart races featuring characters from the Mario franchise. The game includes various tracks, power-ups, and multiplayer modes.",
+        "1. Use power-ups strategically to gain an advantage. 2. Learn the tracks to master shortcuts and avoid obstacles. 3. Use drifting to improve your speed and handling.",
+        "1. Occasionally, players may experience issues with AI opponents. 2. Some tracks may have unexpected hazards. 3. Multiplayer modes may have network-related issues.",
+        "1. Practice on each track to improve your racing skills. 2. Use power-ups wisely to gain an advantage in races. 3. Explore different characters and vehicles to find your preferred setup."
+    )
+
+    add_game(
+        "Super Mario Party",
+        "Super Mario Party is a party game featuring a variety of mini-games and board game-style gameplay. Players compete to collect stars and coins while participating in various mini-games.",
+        "1. Master the mini-games to gain an advantage. 2. Use items and coins strategically to collect stars. 3. Pay attention to the board game elements and plan your moves accordingly.",
+        "1. Mini-games may have varying levels of difficulty. 2. Board game mechanics may have occasional issues. 3. Multiplayer may experience connectivity problems.",
+        "1. Learn the rules and strategies for each mini-game. 2. Plan your moves carefully in the board game sections. 3. Use items and coins effectively to achieve victory."
+    )
+
+    add_game(
+        "Super Mario Maker",
+        "Super Mario Maker allows players to create and share their own Mario levels using a variety of tools and assets from different Mario games. Players can also play levels created by others.",
+        "1. Experiment with different level design tools and assets. 2. Play a variety of user-created levels to find new challenges. 3. Use the online features to share and rate levels.",
+        "1. User-created levels may have design quirks or glitches. 2. Occasionally, online features may experience connectivity issues. 3. Some levels may be extremely challenging or unbalanced.",
+        "1. Utilize the level design tools to create engaging and fun levels. 2. Play and provide feedback on levels created by others. 3. Explore different themes and mechanics to enhance your level design skills."
+    )
+
+    add_game(
+        "Mario Tennis Aces",
+        "Mario Tennis Aces is a sports game featuring tennis matches with characters from the Mario franchise. The game includes a variety of modes and special moves for each character.",
+        "1. Master the special moves and abilities of each character. 2. Practice timing and positioning for effective serves and returns. 3. Explore different game modes to improve your skills.",
+        "1. Occasionally, players may experience issues with game physics. 2. Some characters may have balance issues. 3. Multiplayer may experience connectivity problems.",
+        "1. Learn the strengths and weaknesses of each character. 2. Practice different shots and serves to improve your game. 3. Utilize the special moves to gain an advantage in matches."
+    )
+
+    add_game(
+        "Mario & Luigi Superstar Saga",
+        "Mario & Luigi: Superstar Saga is a role-playing game where players control Mario and Luigi as they embark on a quest to rescue Princess Peach's voice and save the Bean bean Kingdom.",
+        "1. Utilize the unique abilities of both Mario and Luigi in battles. 2. Explore the world to find hidden items and secrets. 3. Use the game's humor and dialogue to enhance your experience.",
+        "1. Some puzzles may be challenging or confusing. 2. Battles may have complex mechanics. 3. Occasionally, the game's humor may not be to everyone's taste.",
+        "1. Master the combat mechanics and abilities of both characters. 2. Explore every area to find hidden items and secrets. 3. Pay attention to the story and dialogue for additional hints and context."
+    )
+    add_game(
+        "Minecraft Dungeons",
+        "Minecraft Dungeons is an action-adventure dungeon crawler developed by Mojang Studios and Double Eleven. Set in the Minecraft universe, players battle through dungeons to defeat the Arch-Villager and his minions.",
+        "1. Use different weapon types to find your preferred play style. 2. Upgrade your gear and artifacts regularly. 3. Explore dungeons thoroughly for hidden loot and secrets.",
+        "1. Occasionally, the game may have connectivity issues. 2. Some dungeons might have repetitive layouts. 3. Certain enemies can be challenging due to their abilities.",
+        "1. Choose your character class and gear based on your preferred play style. 2. Team up with friends for a more enjoyable experience. 3. Complete side quests and challenges to earn better rewards."
+    )
+
+    add_game(
+        "Minecraft Earth",
+        "Minecraft Earth is an augmented reality mobile game that blends Minecraft’s creative gameplay with real-world exploration. Players can build structures, collect resources, and interact with others in a shared AR environment.",
+        "1. Explore your real-world surroundings to find resources and building materials. 2. Collaborate with other players to create larger projects. 3. Use the game’s AR features to enhance your building experience.",
+        "1. AR features may have occasional glitches or limitations. 2. The game may experience connectivity issues. 3. Some features might not work well in low-light environments.",
+        "1. Utilize AR features to create and view structures in your real-world environment. 2. Join community events and challenges to earn rewards. 3. Use in-game tools to improve your building and exploration experience."
+    )
+
+    add_game(
+        "Minecraft Story Mode",
+        "Minecraft Story Mode is an episodic graphic adventure based on the Minecraft universe. Players follow a narrative-driven story with branching choices that impact the outcome of the game.",
+        "1. Make choices that align with your preferred storyline. 2. Explore different dialogue options to uncover more about the story. 3. Complete puzzles and challenges to advance through episodes.",
+        "1. Occasionally, episodes may have bugs or performance issues. 2. Some choices may lead to unexpected outcomes. 3. The game's episodic nature means that later episodes may require purchasing.",
+        "1. Pay attention to the story and character interactions to make informed choices. 2. Explore each episode fully to uncover all secrets and achievements. 3. Use different dialogue and choice options to experience varied story outcomes."
+    )
+
+    add_game(
+        "Minecraft Story Mode  Season Two",
+        "Minecraft: Story Mode - Season Two continues the adventures of Jesse and their friends. Players make choices and complete quests in a new set of episodes, further expanding the story.",
+        "1. Continue making choices based on your preferred storyline. 2. Utilize new characters and settings introduced in the season. 3. Explore the new episodes to uncover additional story elements and secrets.",
+        "1. The game may have occasional bugs or performance issues. 2. Choices from Season One may influence the storyline. 3. Later episodes may require additional purchases.",
+        "1. Follow the story and character arcs to make impactful decisions. 2. Explore each episode to find hidden secrets and achievements. 3. Pay attention to the evolving story and character relationships."
+    )
+
+    add_game(
+        "Minecraft Legends",
+        "Minecraft Legends is an action-strategy game that blends the Minecraft universe with strategic gameplay. Players build and command armies to fend off invasions and battle through an expansive world.",
+        "1. Build and upgrade your base strategically to withstand enemy attacks. 2. Utilize different units and tactics to gain an advantage in battles. 3. Explore the world to gather resources and unlock new abilities.",
+        "1. The game may experience performance issues during large-scale battles. 2. Certain enemies or levels might be more challenging due to game balance. 3. Some mechanics might not be fully intuitive for new players.",
+        "1. Focus on building a strong base and defensive structures. 2. Experiment with different unit compositions and tactics. 3. Engage in side quests and exploration to improve your capabilities."
+
+    )
+    add_game(
+            "Halo: Combat Evolved",
+            "Halo: Combat Evolved is a first-person shooter developed by Bungee. The game follows the adventures of Master Chief, a super-soldier, fighting against the alien Covenant and the Flood.",
+            "1. Use the assault rifle for close to medium-range combat. 2. Utilize grenades and vehicles effectively. 3. Learn enemy patterns and exploit their weaknesses.",
+            "1. Some enemies may have unpredictable behaviors. 2. Occasionally, the game may have minor graphical glitches. 3. Certain levels may have challenging encounters.",
+            "1. Follow the main storyline to progress through the game. 2. Explore each level for hidden items and secrets. 3. Master the use of various weapons and vehicles."
+    )
+
+    add_game(
+            "Halo 2",
+            "Halo 2 is the sequel to Halo: Combat Evolved, continuing the story of Master Chief. The game introduces new weapons, vehicles, and an expanded storyline involving the Covenant and the Flood.",
+            "1. Experiment with the new weapon types and their effects. 2. Use the active camouflage power-up strategically. 3. Switch between different weapons based on the situation.",
+            "1. Some missions may have balance issues. 2. Occasionally, there may be graphical glitches or bugs. 3. Certain enemy types can be difficult to counter.",
+            "1. Follow the story to understand the expanded lore. 2. Take advantage of the new gameplay mechanics and weapons. 3. Explore each mission to find hidden objectives and items."
+        )
+
+    add_game(
+            "Halo 3",
+            "Halo 3 concludes the trilogy, following Master Chief’s final battle against the Covenant and the Flood. The game features enhanced graphics, new gameplay elements, and a focus on the epic conclusion of the storyline.",
+            "1. Use new vehicles and weapons effectively. 2. Utilize the Forge mode to create custom maps. 3. Master the new equipment types available in the game.",
+            "1. Some levels may have minor bugs or glitches. 2. The difficulty of certain missions may vary. 3. Multiplayer may experience balance issues.",
+            "1. Follow the epic conclusion of the storyline for a satisfying experience. 2. Use the Forge mode to experiment with custom content. 3. Engage in multiplayer to experience new gameplay features."
+        )
+
+    add_game(
+            "Halo 4",
+            "Halo 4 marks the beginning of a new trilogy, introducing new enemies and a deeper story about the Forerunners. The game continues Master Chief's journey with updated graphics and gameplay mechanics.",
+            "1. Learn to use the new weapons and abilities introduced. 2. Adapt to the new enemy types and tactics. 3. Explore the environments for additional lore and secrets.",
+            "1. Some levels may have performance issues. 2. The introduction of new mechanics may require adjustment. 3. Certain enemies may be challenging to defeat.",
+            "1. Follow the new storyline to uncover the mysteries of the Forerunners. 2. Utilize new gameplay features and mechanics effectively. 3. Explore each level thoroughly for hidden content and upgrades."
+        )
+
+    add_game(
+            "Halo 5 Guardians",
+            "Halo 5: Guardians continues the saga with new gameplay elements and a focus on the conflict between Master Chief and Spartan Locke. The game features enhanced multiplayer modes and an expanded storyline.",
+            "1. Master the new movement mechanics like sprinting and clambering. 2. Use the new weapon and vehicle options in multiplayer. 3. Work with your team to complete objectives effectively.",
+            "1. Multiplayer balance may vary with updates. 2. Some levels may have minor bugs or glitches. 3. The storyline may have complex elements to follow.",
+            "1. Explore the multiplayer modes to experience new features. 2. Follow the storyline to understand the conflict between characters. 3. Utilize the new gameplay mechanics to gain an advantage."
+        )
+
+    add_game(
+            "Halo Infinite",
+            "Halo Infinite continues the Master Chief’s story with an open-world approach and new gameplay mechanics. The game features a revamped graphics engine and introduces new enemies and allies.",
+            "1. Explore the open world to find collectibles and upgrades. 2. Use new equipment and abilities to navigate the environment. 3. Adapt to new enemy types and tactics introduced in the game.",
+            "1. The open world may have performance issues on certain systems. 2. Some gameplay mechanics may require adjustment. 3. The story may have complex elements and multiple objectives.",
+            "1. Take advantage of the open-world design to explore and uncover secrets. 2. Use the new gameplay mechanics to navigate and combat effectively. 3. Follow the storyline to understand the new threats and allies."
+        )
+    add_game(
+        "Dishonored",
+        "Dishonored is a first-person action-adventure game that emphasizes stealth, combat, and the use of supernatural powers. Players take on the role of Corvo Attano, a bodyguard-turned-assassin seeking revenge.",
+        "1. Utilize stealth and supernatural abilities to avoid detection. 2. Explore the city of Dunwall to uncover secrets and gain power. 3. Choose between lethal and non-lethal methods to complete missions.",
+        "1. The game's moral choices can lead to different outcomes. 2. The stealth mechanics may be challenging for some players. 3. The dark atmosphere and complex story may not appeal to everyone.",
+        "1. Experiment with different powers and gadgets to find your playstyle. 2. Pay attention to the game's environment for hidden paths and clues. 3. Consider the consequences of your actions on the game's world and story."
+    )
+
+    add_game(
+        "Dishonored 2",
+        "Dishonored 2 is the sequel to Dishonored, offering a new story with two playable characters, Corvo Attano and Emily Kaldwin. The game introduces new powers, weapons, and a more expansive world to explore.",
+        "1. Choose between Corvo and Emily, each with unique abilities. 2. Utilize stealth, combat, and supernatural powers to overcome challenges. 3. Explore the intricately designed levels with multiple paths and secrets.",
+        "1. The game’s difficulty can be challenging, especially on higher settings. 2. Some players may find the dual protagonists' storylines complex. 3. Performance issues may occur on certain hardware configurations.",
+        "1. Replay missions with different characters to experience new gameplay options. 2. Use the environment and your abilities creatively to avoid or eliminate enemies. 3. Pay attention to the story and lore for a deeper understanding of the game’s world."
+    )
+
+    add_game(
+        "Dishonored Death of the Outsider",
+        "Dishonored: Death of the Outsider is a standalone expansion to Dishonored 2, featuring Billie Lurk as the protagonist. The game offers new abilities, a streamlined approach to gameplay, and a focused story.",
+        "1. Use new powers and gadgets to complete missions. 2. Explore the game’s world to find hidden items and lore. 3. Plan your approach carefully to avoid detection and complete objectives.",
+        "1. The shorter length of the game may disappoint fans of the series. 2. The lack of a chaos system changes the impact of player choices. 3. Some players may find the difficulty curve steep in certain sections.",
+        "1. Experiment with Billie’s unique abilities to find creative solutions. 2. Take time to explore the game’s environments for hidden content. 3. Approach each mission with a different strategy to see various outcomes."
+    )
+    add_game(
+        "Dishonored Definitive Edition",
+        "Dishonored: Definitive Edition is a remastered version of the original Dishonored game, featuring enhanced graphics and all previously released downloadable content (DLC), including additional missions and challenges.",
+        "1. Play through the original game with improved graphics and performance. 2. Explore the world of Dunwall with all DLC content integrated into the experience. 3. Use stealth, combat, and supernatural powers to complete your objectives.",
+        "1. The core gameplay remains the same, so it may feel familiar to those who played the original. 2. Some of the DLC content may alter the pacing and balance of the main story. 3. The game's atmosphere and mature themes may not appeal to everyone.",
+        "1. Take advantage of the enhanced visuals to fully immerse yourself in the world of Dunwall. 2. Explore the additional content provided by the DLCs for a richer experience. 3. Experiment with different playstyles, utilizing the full range of powers and gadgets."
+    )
+    add_game(
+        "Borderlands",
+        "Borderlands is a first-person shooter with RPG elements, set on the desolate planet of Pandora. The game is known for its unique cel-shaded art style, cooperative multiplayer, and a massive array of procedurally generated weapons.",
+        "1. Explore the open world of Pandora and complete various missions. 2. Choose from four different character classes, each with unique abilities. 3. Collect and customize an enormous variety of weapons and equipment.",
+        "1. The repetitive mission structure may not appeal to everyone. 2. The game’s humor and tone may not be suitable for all audiences. 3. Some players may find the RPG elements and leveling system complex.",
+        "1. Take advantage of cooperative multiplayer to experience the game with friends. 2. Experiment with different character builds to find your preferred playstyle. 3. Explore the world thoroughly to discover hidden loot and secrets."
+    )
+
+    add_game(
+        "Borderlands 2",
+        "Borderlands 2 is the sequel to the original game, offering an expanded world, more character classes, and an even greater variety of weapons. The game continues the story on Pandora, introducing new characters and a more engaging plot.",
+        "1. Choose from four new character classes, each with unique abilities and skill trees. 2. Engage in fast-paced combat with a vast arsenal of weapons and equipment. 3. Experience the game’s dark humor and story-driven missions.",
+        "1. The game’s difficulty can spike in certain areas, requiring careful preparation. 2. Some players may find the story’s humor and tone divisive. 3. The open-world exploration may feel overwhelming for some players.",
+        "1. Play with friends in cooperative mode to make challenging sections easier. 2. Experiment with different weapon types and character builds to optimize your playstyle. 3. Pay attention to the story and character interactions for a richer experience."
+    )
+
+    add_game(
+        "Borderlands: The Pre-Sequel",
+        "Borderlands: The Pre-Sequel is set between the events of the first two games, focusing on Handsome Jack’s rise to power. The game introduces low-gravity environments, new character classes, and a variety of new weapons and abilities.",
+        "1. Explore the moon of Pandora with low-gravity mechanics and oxygen management. 2. Choose from four new character classes, each with unique abilities and skill trees. 3. Experience the story of Handsome Jack’s rise from different perspectives.",
+        "1. The low-gravity mechanics may take some time to get used to. 2. Some players may find the story less compelling compared to other entries in the series. 3. The game’s setting may feel repetitive after extended play sessions.",
+        "1. Take advantage of the low-gravity environments to gain a tactical advantage in combat. 2. Experiment with the new character classes to find the one that suits your playstyle. 3. Explore the game’s environments thoroughly to uncover hidden loot and story elements."
+    )
+
+    add_game(
+        "Borderlands 3",
+        "Borderlands 3 continues the looter-shooter gameplay of the series, offering new worlds to explore, new character classes, and an even larger arsenal of weapons. The game features a new story, new enemies, and a variety of gameplay enhancements.",
+        "1. Explore multiple planets with unique environments and challenges. 2. Choose from four new Vault Hunters, each with unique abilities and skill trees. 3. Collect and customize an enormous variety of weapons and gear.",
+        "1. The game’s humor and story may not appeal to all players. 2. Some players may experience performance issues on certain systems. 3. The sheer amount of loot and customization options may feel overwhelming.",
+        "1. Play with friends in cooperative mode to maximize fun and efficiency. 2. Take time to explore each planet thoroughly to discover hidden secrets and side missions. 3. Experiment with different builds and gear combinations to optimize your character."
+    )
+
+    add_game(
+        "Borderlands Game of the Year Edition",
+        "Borderlands: Game of the Year Edition is a remastered version of the original Borderlands, featuring improved graphics, new quality-of-life enhancements, and all previously released DLCs.",
+        "1. Experience the original Borderlands with enhanced graphics and performance. 2. Explore Pandora with all DLC content integrated into the main game. 3. Choose from four character classes, each with unique abilities and playstyles.",
+        "1. The core gameplay remains the same, so it may feel familiar to those who played the original. 2. The game’s humor and tone may not be suitable for everyone. 3. Some players may find the RPG elements and leveling system complex.",
+        "1. Take advantage of the enhanced visuals to fully immerse yourself in the world of Pandora. 2. Explore the additional content provided by the DLCs for a richer experience. 3. Experiment with different playstyles, utilizing the full range of powers and gadgets."
+    )
+
+    add_game(
+        "Borderlands The Handsome Collection",
+        "Borderlands: The Handsome Collection is a compilation that includes Borderlands 2 and Borderlands: The Pre-Sequel, along with all DLCs. The collection is optimized for modern consoles, featuring enhanced graphics and improved performance.",
+        "1. Play through Borderlands 2 and The Pre-Sequel with all DLC content included. 2. Experience the games with enhanced graphics and performance on modern systems. 3. Enjoy cooperative multiplayer with friends, either online or split-screen.",
+        "1. The games’ humor and tone may not appeal to everyone. 2. Some players may experience performance issues on certain systems. 3. The large amount of content may feel overwhelming to new players.",
+        "1. Take advantage of the collection’s cooperative multiplayer to play with friends. 2. Explore the full range of DLC content to get the most out of the games. 3. Experiment with different character builds and weapons to find your preferred playstyle."
+    )
+
+
+
+root = tk.Tk()
+root.title("Game Info Tool")
+
+tk.Label(root, text="Enter Game Name:").pack(pady=10)
+entry = tk.Entry(root)
+entry.pack(pady=5)
+
+search_button = tk.Button(root, text="Search", command=search_game)
+search_button.pack(pady=10)
+
+result_label = tk.Label(root, text="", justify="left")
+result_label.pack(pady=10)
+
+root.mainloop()
